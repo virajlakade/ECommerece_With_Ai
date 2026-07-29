@@ -15,10 +15,14 @@ public class ProductService {
 
     private final ProductRepo productRepo;
     private final ChatClient chatClient;
+    private final AiImageService aiImageService;
 
-    public ProductService(ProductRepo productRepo, ChatClient chatClient) {
+    public ProductService(ProductRepo productRepo,
+                          ChatClient chatClient,
+                          AiImageService aiImageService) {
         this.productRepo = productRepo;
         this.chatClient = chatClient;
+        this.aiImageService = aiImageService;
     }
 
     public List<Product> getAllProducts() {
@@ -47,6 +51,9 @@ public class ProductService {
         return productRepo.searchProducts(keyword);
     }
 
+    // ==========================
+    // AI Product Description
+    // ==========================
     public String generateDesc(String name, String category) {
 
         String descriptionPrompt = String.format("""
@@ -61,13 +68,12 @@ public class ProductService {
                 - Write a professional and engaging description of 150-200 words.
                 - Start with an attractive introduction.
                 - Explain what the product is and its primary purpose.
-                - Highlight its key features and benefits based on the product name and category.
+                - Highlight its key features and benefits.
                 - Mention who the product is best suited for.
                 - Use a persuasive, customer-friendly tone.
-                - Make the description SEO-friendly by naturally including relevant keywords.
-                - Do not mention price, brand, stock, or technical specifications unless they can be reasonably inferred from the product name.
-                - Do not invent unrealistic or false claims.
-                - End with a short call-to-action encouraging customers to explore or purchase the product.
+                - Make the description SEO-friendly.
+                - Do not mention price, brand, or stock.
+                - End with a short call-to-action.
 
                 Return only the product description.
                 """, name, category);
@@ -76,5 +82,36 @@ public class ProductService {
                 .user(descriptionPrompt)
                 .call()
                 .content();
+    }
+
+    // ==========================
+    // AI Product Image
+    // ==========================
+    public byte[] generateImage(String name,
+                                String category,
+                                String description) {
+
+        String prompt = String.format("""
+                Create a professional, realistic e-commerce product image.
+
+                Product Name: %s
+                Category: %s
+                Description: %s
+
+                Requirements:
+                - White background
+                - High quality
+                - Studio lighting
+                - Product centered
+                - No watermark
+                - No text
+                - Premium product photography
+                - Suitable for an online shopping website
+                """,
+                name,
+                category,
+                description);
+
+        return aiImageService.generateImage(prompt);
     }
 }
