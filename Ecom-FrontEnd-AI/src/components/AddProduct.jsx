@@ -132,16 +132,20 @@ const AddProduct = () => {
     setGeneratingDescription(true);
 
     try {
-      const response = await axios.post(
-        `${baseUrl}/api/product/generate-description`,
-        null,
-        {
-          params: {
-            name: product.name,
-            category: product.category
+      const response = await axios.get(
+          `${baseUrl}/api/product/generate-description`,
+          {
+            params: {
+              name: product.name,
+              category: product.category,
+            },
           }
-        }
       );
+
+      setProduct((prev) => ({
+        ...prev,
+        description: response.data,
+      }));
 
       if (response.data) {
         setProduct({

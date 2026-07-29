@@ -1,4 +1,4 @@
-package com.telusko.SpringEcom;
+package com.viraj.SpringEcom;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
