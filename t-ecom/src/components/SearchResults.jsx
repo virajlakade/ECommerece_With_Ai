@@ -19,6 +19,10 @@ const SearchResults = () => {
     }
   }, [location, navigate]);
 
+  const handleViewProduct = (productId) => {
+    navigate(`/product/${productId}`);
+  };
+
   // Function to convert base64 string to data URL
     const convertBase64ToDataURL = (base64String, mimeType = 'image/jpeg') => {
       if (!base64String) return unplugged; // Return fallback image if no data
@@ -36,10 +40,6 @@ const SearchResults = () => {
       // Convert base64 string to data URL
       return `data:${mimeType};base64,${base64String}`;
     };
-
-  const handleViewProduct = (productId) => {
-    navigate(`/product/${productId}`);
-  };
 
   const handleAddToCart = (productId) => {
     toast.success(`Product with ID ${productId} added to cart!`);
@@ -74,7 +74,7 @@ const SearchResults = () => {
               <div key={product.id} className="col">
                 <div className="card h-100 shadow-sm">
                   <img 
-                    src={convertBase64ToDataURL(product.productImage)} 
+                    src={convertBase64ToDataURL(product.imageData)} 
                     className="card-img-top p-3" 
                     alt={product.name}
                     style={{ height: "200px", objectFit: "contain", cursor: "pointer" }}

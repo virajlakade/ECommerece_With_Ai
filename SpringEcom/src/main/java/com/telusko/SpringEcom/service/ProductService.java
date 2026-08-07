@@ -1,3 +1,4 @@
+/*
 package com.telusko.SpringEcom.service;
 
 import com.telusko.SpringEcom.model.Product;
@@ -18,10 +19,11 @@ public class ProductService {
     private final AiImageService aiImageService;
 
     public ProductService(ProductRepo productRepo,
-                          ChatClient chatClient,
+                          ChatClient.Builder chatClientBuilder,
                           AiImageService aiImageService) {
+
         this.productRepo = productRepo;
-        this.chatClient = chatClient;
+        this.chatClient = chatClientBuilder.build();
         this.aiImageService = aiImageService;
     }
 
@@ -56,30 +58,26 @@ public class ProductService {
     // ==========================
     public String generateDesc(String name, String category) {
 
-        String descriptionPrompt = String.format("""
+        String prompt = String.format("""
                 You are an expert e-commerce copywriter.
-
-                Generate a high-quality product description using only the following information.
 
                 Product Name: %s
                 Category: %s
 
-                Instructions:
-                - Write a professional and engaging description of 150-200 words.
-                - Start with an attractive introduction.
-                - Explain what the product is and its primary purpose.
-                - Highlight its key features and benefits.
-                - Mention who the product is best suited for.
-                - Use a persuasive, customer-friendly tone.
-                - Make the description SEO-friendly.
-                - Do not mention price, brand, or stock.
-                - End with a short call-to-action.
+                Generate a professional product description of 150-200 words.
+                Include:
+                - Introduction
+                - Features
+                - Benefits
+                - Target users
+                - SEO-friendly content
+                - End with a call-to-action
 
-                Return only the product description.
+                Return only the description.
                 """, name, category);
 
         return chatClient.prompt()
-                .user(descriptionPrompt)
+                .user(prompt)
                 .call()
                 .content();
     }
@@ -92,26 +90,19 @@ public class ProductService {
                                 String description) {
 
         String prompt = String.format("""
-                Create a professional, realistic e-commerce product image.
+                Create a realistic e-commerce product image.
 
                 Product Name: %s
                 Category: %s
                 Description: %s
 
-                Requirements:
-                - White background
-                - High quality
-                - Studio lighting
-                - Product centered
-                - No watermark
-                - No text
-                - Premium product photography
-                - Suitable for an online shopping website
-                """,
-                name,
-                category,
-                description);
+                White background.
+                Studio lighting.
+                Premium product photography.
+                No watermark.
+                No text.
+                """, name, category, description);
 
         return aiImageService.generateImage(prompt);
     }
-}
+}*/

@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import AppContext from "../Context/Context";
+import AppContext from "../Context/Context.jsx";
 import unplugged from "../assets/unplugged.png";
 
 const Home = ({ selectedCategory }) => {
@@ -93,7 +93,7 @@ const Home = ({ selectedCategory }) => {
             {toastProduct && (
               <div className="d-flex align-items-center">
                 <img 
-                  src={convertBase64ToDataURL(toastProduct.productImage)} 
+                  src={convertBase64ToDataURL(toastProduct.imageData)} 
                   alt={toastProduct.name} 
                   className="me-2 rounded" 
                   width="40" 
@@ -120,14 +120,14 @@ const Home = ({ selectedCategory }) => {
             </div>
           ) : (
             filteredProducts.map((product) => {
-              const { id, brand, name, price, productAvailable, productImage, stockQuantity } = product;
+              const { id, brand, name, price, productAvailable, imageData, stockQuantity } = product;
               
               return (
                 <div className="col" key={id}>
                   <div className={`card h-100 shadow-sm ${!productAvailable ? 'bg-light' : ''}`}>
                     <Link to={`/product/${id}`} className="text-decoration-none text-dark">
                       <img
-                        src={convertBase64ToDataURL(productImage)} 
+                        src={convertBase64ToDataURL(imageData)} 
                         alt={name}
                         className="card-img-top p-2"
                         style={{ height: "150px", objectFit: "cover" }}

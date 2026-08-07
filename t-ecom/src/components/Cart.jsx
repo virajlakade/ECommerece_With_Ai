@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
-import AppContext from "../Context/Context";
+import AppContext from "../Context/Context.jsx";
 import axios from "axios";
-import CheckoutPopup from "./CheckoutPopup";
+import CheckoutPopup from "./CheckoutPopup.jsx";
 import { Button } from 'react-bootstrap';
 
 const Cart = () => {
@@ -74,22 +74,21 @@ const Cart = () => {
     setCartItems(newCartItems);
   };
   const convertBase64ToDataURL = (base64String, mimeType = 'image/jpeg') => {
-  // ✅ Fallback image if base64String is empty or undefined
-  const fallbackImage = "/fallback-image.jpg"; // make sure this image exists in your public folder
+    if (!base64String) return unplugged; // Return fallback image if no data
 
-  if (!base64String) return fallbackImage;
+    // If it's already a data URL, return as is
+    if (base64String.startsWith('data:')) {
+      return base64String;
+    }
 
-  if (base64String.startsWith("data:")) {
-    return base64String;
-  }
+    // If it's already a URL, return as is
+    if (base64String.startsWith('http')) {
+      return base64String;
+    }
 
-  if (base64String.startsWith("http")) {
-    return base64String;
-  }
-
-  return `data:${mimeType};base64,${base64String}`;
-};
-
+    // Convert base64 string to data URL
+    return `data:${mimeType};base64,${base64String}`;
+  };
   const handleCheckout = async () => {
     try {
       for (const item of cartItems) {
@@ -161,7 +160,7 @@ const Cart = () => {
                             <td>
                               <div className="d-flex align-items-center">
                                 <img
-                                  src={convertBase64ToDataURL(item.productImage)}
+                                  src={convertBase64ToDataURL(item.imageData)}
                                   alt={item.name}
                                   className="rounded me-3"
                                   width="80"

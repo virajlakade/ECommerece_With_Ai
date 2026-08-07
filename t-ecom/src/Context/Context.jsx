@@ -1,4 +1,4 @@
-import axios from "../axios";
+import axios from "../axios.jsx";
 import { useState, useEffect, createContext } from "react";
 
 const AppContext = createContext({
@@ -8,7 +8,8 @@ const AppContext = createContext({
   addToCart: (product) => {},
   removeFromCart: (productId) => {},
   refreshData:() =>{},
-  updateStockQuantity: (productId, newQuantity) =>{}  
+  updateStockQuantity: (productId, newQuantity) =>{}
+  
 });
 
 export const AppProvider = ({ children }) => {

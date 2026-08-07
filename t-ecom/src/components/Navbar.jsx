@@ -129,6 +129,7 @@ const handleLinkClick = () => {
     "Electronics",
     "Toys",
     "Fashion",
+    "Other",
   ];
   
   return (
@@ -163,10 +164,45 @@ const handleLinkClick = () => {
               </a>
             </li>
 
+            {/* Dropdown is commented out in the original code */}
+            {/* <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="/"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Categories
+              </a>
 
+              <ul className="dropdown-menu">
+                {categories.map((category) => (
+                  <li key={category}>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => handleCategorySelect(category)}
+                    >
+                      {category}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </li> */}
+
+            <li className="nav-item">
+              <a className="nav-link" href="/askai" onClick={handleLinkClick}>
+                Ask AI
+              </a>
+            </li>
+            <li className="nav-item">
+              <a className="nav-link" href="/orders" onClick={handleLinkClick}>
+                Orders
+              </a>
+            </li>
           </ul>
           
-         
+
           
           <div className="d-flex align-items-center">
             <a href="/cart" className="nav-link text-dark me-3" onClick={handleLinkClick}>
@@ -177,7 +213,7 @@ const handleLinkClick = () => {
               <input
                 className="form-control me-2"
                 type="search"
-                placeholder="Type to search"
+                placeholder="type to search"
                 aria-label="Search"
                 value={input}
                 onChange={(e) => handleInputChange(e.target.value)}

@@ -63,22 +63,21 @@ const CheckoutPopup = ({ show, handleClose, cartItems, totalPrice }) => {
     }
   };
   const convertBase64ToDataURL = (base64String, mimeType = 'image/jpeg') => {
-  // ✅ Fallback image if base64String is empty or undefined
-  const fallbackImage = "/fallback-image.jpg"; // make sure this image exists in your public folder
+    if (!base64String) return unplugged; // Return fallback image if no data
 
-  if (!base64String) return fallbackImage;
+    // If it's already a data URL, return as is
+    if (base64String.startsWith('data:')) {
+      return base64String;
+    }
 
-  if (base64String.startsWith("data:")) {
-    return base64String;
-  }
+    // If it's already a URL, return as is
+    if (base64String.startsWith('http')) {
+      return base64String;
+    }
 
-  if (base64String.startsWith("http")) {
-    return base64String;
-  }
-
-  return `data:${mimeType};base64,${base64String}`;
-};
-
+    // Convert base64 string to data URL
+    return `data:${mimeType};base64,${base64String}`;
+  };
   return (
     <>
       <Modal show={show} onHide={handleClose} centered>
@@ -91,7 +90,7 @@ const CheckoutPopup = ({ show, handleClose, cartItems, totalPrice }) => {
               {cartItems.map((item) => (
                 <div key={item.id} className="d-flex mb-3 border-bottom pb-3">
                   <img
-                    src={convertBase64ToDataURL(item.productImage)}
+                    src={convertBase64ToDataURL(item.imageData)}
                     alt={item.name}
                     className="me-3 rounded"
                     style={{ width: '80px', height: '80px', objectFit: 'cover' }}
@@ -99,13 +98,13 @@ const CheckoutPopup = ({ show, handleClose, cartItems, totalPrice }) => {
                   <div className="flex-grow-1">
                     <h6 className="mb-1">{item.name}</h6>
                     <p className="mb-1 small">Quantity: {item.quantity}</p>
-                    <p className="mb-0 small">Price: ${(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="mb-0 small">Price: ₹{(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
 
               <div className="text-center my-4">
-                <h5 className="fw-bold">Total: ${totalPrice.toFixed(2)}</h5>
+                <h5 className="fw-bold">Total: ₹{totalPrice.toFixed(2)}</h5>
               </div>
 
               <Form.Group className="mb-3">

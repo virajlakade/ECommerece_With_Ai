@@ -132,20 +132,16 @@ const AddProduct = () => {
     setGeneratingDescription(true);
 
     try {
-      const response = await axios.get(
-          `${baseUrl}/api/product/generate-description`,
-          {
-            params: {
-              name: product.name,
-              category: product.category,
-            },
+      const response = await axios.post(
+        `${baseUrl}/api/product/generate-description`,
+        null,
+        {
+          params: {
+            name: product.name,
+            category: product.category
           }
+        }
       );
-
-      setProduct((prev) => ({
-        ...prev,
-        description: response.data,
-      }));
 
       if (response.data) {
         setProduct({
@@ -388,6 +384,7 @@ const AddProduct = () => {
                     <option value="Electronics">Electronics</option>
                     <option value="Toys">Toys</option>
                     <option value="Fashion">Fashion</option>
+                    <option value="Other">Other</option>
                   </select>
                   {errors.category && <div className="invalid-feedback">{errors.category}</div>}
                 </div>
