@@ -20,109 +20,171 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+
     @GetMapping("/products")
     public ResponseEntity<List<Product>> getProducts() {
-        return new ResponseEntity<>(productService.getAllProducts(), HttpStatus.OK);
+
+        return ResponseEntity.ok(
+                productService.getAllProducts()
+        );
     }
+
 
     @GetMapping("/product/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable int id) {
+    public ResponseEntity<?> getProductById(
+            @PathVariable int id) {
 
-        Product product = productService.getProductById(id);
+        Product product =
+                productService.getProductById(id);
 
         if (product.getId() > 0) {
-            return new ResponseEntity<>(product, HttpStatus.OK);
+            return ResponseEntity.ok(product);
         }
 
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body("Product not found");
     }
 
+
     @GetMapping("/product/{productId}/image")
-    public ResponseEntity<byte[]> getImageByProductId(@PathVariable int productId) {
+    public ResponseEntity<byte[]> getImageByProductId(
+            @PathVariable int productId) {
 
-        Product product = productService.getProductById(productId);
+        Product product =
+                productService.getProductById(productId);
 
-        if (product.getId() > 0) {
+        if (product.getId() > 0
+                && product.getProductImage() != null
+                && product.getImageType() != null) {
+
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(product.getImageType()))
+                    .contentType(
+                            MediaType.parseMediaType(
+                                    product.getImageType()
+                            )
+                    )
                     .body(product.getProductImage());
         }
 
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return ResponseEntity
+                .notFound()
+                .build();
     }
 
-    @PostMapping("/product")
+
+    @PostMapping(
+            value = "/product",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<?> addProduct(
-            @RequestPart Product product,
-            @RequestPart MultipartFile imageFile) {
+            @RequestPart("product") Product product,
+            @RequestPart("imageFile") MultipartFile imageFile) {
 
         try {
-            Product savedProduct =
-                    productService.addOrUpdateProduct(product, imageFile);
 
-            return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
+            Product savedProduct =
+                    productService.addOrUpdateProduct(
+                            product,
+                            imageFile
+                    );
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(savedProduct);
 
         } catch (IOException e) {
-            return new ResponseEntity<>(
-                    e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR
-            );
+
+            e.printStackTrace();
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(e.getMessage());
         }
     }
 
-    @PutMapping("/product/{id}")
+
+    @PutMapping(
+            value = "/product/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<?> updateProduct(
             @PathVariable int id,
-            @RequestPart Product product,
-            @RequestPart MultipartFile imageFile) {
+
+            @RequestPart("product")
+            Product product,
+
+            @RequestPart(
+                    value = "imageFile",
+                    required = false
+            )
+            MultipartFile imageFile) {
 
         try {
+
+            // IMPORTANT
             product.setId(id);
 
-            productService.addOrUpdateProduct(product, imageFile);
+            Product updatedProduct =
+                    productService.addOrUpdateProduct(
+                            product,
+                            imageFile
+                    );
 
-            return new ResponseEntity<>(
-                    "Updated Successfully",
-                    HttpStatus.OK
+            return ResponseEntity.ok(
+                    updatedProduct
             );
 
         } catch (IOException e) {
-            return new ResponseEntity<>(
-                    e.getMessage(),
-                    HttpStatus.BAD_REQUEST
-            );
+
+            e.printStackTrace();
+
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
         }
     }
+
 
     @DeleteMapping("/product/{id}")
-    public ResponseEntity<?> deleteProduct(@PathVariable int id) {
+    public ResponseEntity<?> deleteProduct(
+            @PathVariable int id) {
 
-        Product product = productService.getProductById(id);
+        Product product =
+                productService.getProductById(id);
 
         if (product.getId() > 0) {
+
             productService.deleteProduct(id);
-            return new ResponseEntity<>(
-                    "Deleted Successfully",
-                    HttpStatus.OK
+
+            return ResponseEntity.ok(
+                    "Deleted Successfully"
             );
         }
 
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body("Product not found");
     }
+
 
     @GetMapping("/products/search")
     public ResponseEntity<List<Product>> searchProducts(
             @RequestParam String keyword) {
 
-        List<Product> products =
-                productService.searchProducts(keyword);
-
-        return new ResponseEntity<>(products, HttpStatus.OK);
+        return ResponseEntity.ok(
+                productService.searchProducts(keyword)
+        );
     }
 
-    // ==========================
-    // AI Product Description
-    // ==========================
 
     @GetMapping("/product/generate-description")
     public ResponseEntity<String> generateDescription(
@@ -130,39 +192,11 @@ public class ProductController {
             @RequestParam String category) {
 
         String description =
-                productService.generateDesc(name, category);
+                productService.generateDesc(
+                        name,
+                        category
+                );
 
         return ResponseEntity.ok(description);
     }
-
-    // ==========================
-    // AI Product Image
-    // ==========================
-
-  /*  @GetMapping("/product/generate-image")
-    public ResponseEntity<byte[]> generateImage(
-            @RequestParam String name,
-            @RequestParam String category,
-            @RequestParam String description) {
-
-        try {
-
-            byte[] aiImage = productService.generateImage(
-                    name,
-                    category,
-                    description
-            );
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_PNG)
-                    .body(aiImage);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-
-            return new ResponseEntity<>(
-                    HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
-    }*/
 }

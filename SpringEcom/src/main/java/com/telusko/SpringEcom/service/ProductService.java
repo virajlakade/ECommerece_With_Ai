@@ -15,6 +15,7 @@ import java.util.List;
 public class ProductService {
 
     // private final AiImageService aiImageService;
+
     private final ProductRepo productRepo;
     private final ChatClient chatClient;
 
@@ -36,36 +37,149 @@ public class ProductService {
         this.chatClient = chatClientBuilder.build();
     }
 
+
+    // ==========================
+    // Get All Products
+    // ==========================
+
     public List<Product> getAllProducts() {
         return productRepo.findAll();
     }
 
+
+    // ==========================
+    // Get Product By ID
+    // ==========================
+
     public Product getProductById(int id) {
-        return productRepo.findById(id).orElse(new Product(-1));
+        return productRepo.findById(id)
+                .orElse(new Product(-1));
     }
 
-    public Product addOrUpdateProduct(Product product, MultipartFile image) throws IOException {
 
-        product.setImageName(image.getOriginalFilename());
-        product.setImageType(image.getContentType());
-        product.setProductImage(image.getBytes());
+    // ==========================
+    // Add / Update Product
+    // ==========================
+
+    public Product addOrUpdateProduct(
+            Product product,
+            MultipartFile image) throws IOException {
+
+        /*
+         * UPDATE PRODUCT
+         *
+         * If product ID already exists,
+         * get the existing product from database.
+         */
+
+        if (product.getId() > 0) {
+
+            Product existingProduct =
+                    productRepo.findById(product.getId())
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Product not found with id: "
+                                                    + product.getId()
+                                    )
+                            );
+
+            /*
+             * If user did NOT select a new image,
+             * keep the existing image.
+             */
+
+            if (image == null || image.isEmpty()) {
+
+                product.setImageName(
+                        existingProduct.getImageName()
+                );
+
+                product.setImageType(
+                        existingProduct.getImageType()
+                );
+
+                product.setProductImage(
+                        existingProduct.getProductImage()
+                );
+
+            } else {
+
+                /*
+                 * User selected a new image,
+                 * so replace the old image.
+                 */
+
+                product.setImageName(
+                        image.getOriginalFilename()
+                );
+
+                product.setImageType(
+                        image.getContentType()
+                );
+
+                product.setProductImage(
+                        image.getBytes()
+                );
+            }
+
+        } else {
+
+            /*
+             * ADD NEW PRODUCT
+             *
+             * New products require an image.
+             */
+
+            if (image == null || image.isEmpty()) {
+
+                throw new IllegalArgumentException(
+                        "Image is required when adding a new product"
+                );
+            }
+
+            product.setImageName(
+                    image.getOriginalFilename()
+            );
+
+            product.setImageType(
+                    image.getContentType()
+            );
+
+            product.setProductImage(
+                    image.getBytes()
+            );
+        }
 
         return productRepo.save(product);
     }
 
+
+    // ==========================
+    // Delete Product
+    // ==========================
+
     public void deleteProduct(int id) {
         productRepo.deleteById(id);
     }
+
+
+    // ==========================
+    // Search Products
+    // ==========================
 
     @Transactional
     public List<Product> searchProducts(String keyword) {
         return productRepo.searchProducts(keyword);
     }
 
+
     // ==========================
     // AI Product Description
     // ==========================
-    public String generateDesc(String name, String category) {
+
+    public String generateDesc(
+            String name,
+            String category) {
 
         String prompt = String.format("""
                 You are an expert e-commerce copywriter.
@@ -74,6 +188,7 @@ public class ProductService {
                 Category: %s
 
                 Generate a professional product description of 150-200 words.
+
                 Include:
                 - Introduction
                 - Features
@@ -83,13 +198,17 @@ public class ProductService {
                 - End with a call-to-action
 
                 Return only the description.
-                """, name, category);
+                """,
+                name,
+                category
+        );
 
         return chatClient.prompt()
                 .user(prompt)
                 .call()
                 .content();
     }
+
 
     // ==========================
     // AI Product Image

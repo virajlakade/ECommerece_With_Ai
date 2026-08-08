@@ -4,7 +4,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
+
+import org.springframework.ai.vectorstore.qdrant.QdrantVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class ChatBotService {
     @Autowired
     private ResourceLoader resourceLoader;
     @Autowired
-    private PgVectorStore vectorStore;
+    private QdrantVectorStore vectorStore;
     @Autowired
     private ChatClient chatClient;
 

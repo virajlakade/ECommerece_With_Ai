@@ -19,14 +19,41 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/orders/place")
-    public ResponseEntity<OrderResponse> placeOrder(@RequestBody OrderRequest orderRequest) {
-        OrderResponse orderResponse = orderService.placeOrder(orderRequest);
-        return new ResponseEntity<>(orderResponse, HttpStatus.CREATED);
+    public ResponseEntity<OrderResponse> placeOrder(
+            @RequestBody OrderRequest orderRequest) {
+
+        OrderResponse orderResponse =
+                orderService.placeOrder(orderRequest);
+
+        return new ResponseEntity<>(
+                orderResponse,
+                HttpStatus.CREATED
+        );
     }
 
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        List<OrderResponse> orderResponseList = orderService.getAllOrderResponses();
-        return new ResponseEntity<>(orderResponseList, HttpStatus.OK);
+
+        List<OrderResponse> orderResponseList =
+                orderService.getAllOrderResponses();
+
+        return new ResponseEntity<>(
+                orderResponseList,
+                HttpStatus.OK
+        );
+    }
+
+    @PutMapping("/orders/{orderId}")
+    public ResponseEntity<OrderResponse> updateOrder(
+            @PathVariable String orderId,
+            @RequestBody OrderRequest orderRequest) {
+
+        OrderResponse updatedOrder =
+                orderService.updateOrder(orderId, orderRequest);
+
+        return new ResponseEntity<>(
+                updatedOrder,
+                HttpStatus.OK
+        );
     }
 }

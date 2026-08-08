@@ -18,6 +18,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String name;
+    @Column(columnDefinition = "LONGTEXT")
     private String description;
     private String brand;
     private BigDecimal price;
@@ -28,7 +29,9 @@ public class Product {
     private String imageName;
     private String imageType;
     @Lob
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] productImage;
+
 
     public Product(int id){
         this.id = id;
