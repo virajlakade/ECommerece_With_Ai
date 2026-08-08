@@ -1,4 +1,3 @@
-/*
 package com.telusko.SpringEcom.config;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -11,4 +10,4 @@ public class Chatclientconfig {
     public ChatClient chatClient(ChatClient.Builder builder){
         return builder.build();
     }
-}*/
+}

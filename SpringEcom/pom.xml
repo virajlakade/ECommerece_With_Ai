@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 
@@ -15,6 +15,7 @@
 	<groupId>com.telusko</groupId>
 	<artifactId>SpringEcom</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+
 	<name>SpringEcom</name>
 	<description>Spring Boot AI Ecommerce</description>
 
@@ -23,6 +24,7 @@
 		<spring-ai.version>1.0.1</spring-ai.version>
 	</properties>
 
+	<!-- Spring AI BOM -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -61,10 +63,10 @@
 			<artifactId>spring-ai-starter-model-ollama</artifactId>
 		</dependency>
 
-		<!-- Spring AI PGVector -->
+		<!-- Spring AI Qdrant -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+			<artifactId>spring-ai-starter-vector-store-qdrant</artifactId>
 		</dependency>
 
 		<!-- Lombok -->
@@ -86,11 +88,13 @@
 	<build>
 		<plugins>
 
+			<!-- Spring Boot -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 
+			<!-- Java 17 -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

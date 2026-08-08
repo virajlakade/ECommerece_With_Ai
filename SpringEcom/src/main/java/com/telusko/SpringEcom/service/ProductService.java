@@ -1,9 +1,9 @@
-/*
 package com.telusko.SpringEcom.service;
 
 import com.telusko.SpringEcom.model.Product;
 import com.telusko.SpringEcom.repo.ProductRepo;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,17 +14,26 @@ import java.util.List;
 @Service
 public class ProductService {
 
+    // private final AiImageService aiImageService;
     private final ProductRepo productRepo;
     private final ChatClient chatClient;
-    private final AiImageService aiImageService;
 
+    /*
     public ProductService(ProductRepo productRepo,
-                          ChatClient.Builder chatClientBuilder,
-                          AiImageService aiImageService) {
+                           ChatClient.Builder chatClientBuilder,
+                           AiImageService aiImageService) {
 
         this.productRepo = productRepo;
         this.chatClient = chatClientBuilder.build();
         this.aiImageService = aiImageService;
+    }
+    */
+
+    public ProductService(ProductRepo productRepo,
+                          ChatClient.Builder chatClientBuilder) {
+
+        this.productRepo = productRepo;
+        this.chatClient = chatClientBuilder.build();
     }
 
     public List<Product> getAllProducts() {
@@ -85,6 +94,8 @@ public class ProductService {
     // ==========================
     // AI Product Image
     // ==========================
+
+    /*
     public byte[] generateImage(String name,
                                 String category,
                                 String description) {
@@ -105,4 +116,6 @@ public class ProductService {
 
         return aiImageService.generateImage(prompt);
     }
-}*/
+    */
+
+}
