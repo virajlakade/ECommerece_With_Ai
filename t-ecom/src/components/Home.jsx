@@ -4,163 +4,325 @@ import AppContext from "../Context/Context.jsx";
 import unplugged from "../assets/unplugged.png";
 
 const Home = ({ selectedCategory }) => {
-  const { data, isError, addToCart, refreshData } = useContext(AppContext);
-  const [isDataFetched, setIsDataFetched] = useState(false);
+  const {
+    data,
+    isError,
+    addToCart,
+    refreshData,
+  } = useContext(AppContext);
+
   const [showToast, setShowToast] = useState(false);
   const [toastProduct, setToastProduct] = useState(null);
 
-  useEffect(() => {
-    if (!isDataFetched) {
-      refreshData();
-      setIsDataFetched(true);
-    }
-  }, [refreshData, isDataFetched]);
+  // =========================================================
+  // FETCH PRODUCTS
+  // =========================================================
 
   useEffect(() => {
-    console.log(data, 'data from home page');
-  }, [data]);
+    refreshData();
+  }, []);
+
+  // =========================================================
+  // DEBUG
+  // =========================================================
 
   useEffect(() => {
-    let toastTimer;
-    if (showToast) {
-      toastTimer = setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
+    console.log("HOME PRODUCTS:", data);
+    console.log("ADD TO CART FUNCTION:", addToCart);
+  }, [data, addToCart]);
+
+  // =========================================================
+  // TOAST TIMER
+  // =========================================================
+
+  useEffect(() => {
+    if (!showToast) {
+      return;
     }
-    return () => clearTimeout(toastTimer);
+
+    const timer = setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, [showToast]);
 
-  // Function to convert base64 string to data URL
-  const convertBase64ToDataURL = (base64String, mimeType = 'image/jpeg') => {
-    if (!base64String) return unplugged; // Return fallback image if no data
-    
-    // If it's already a data URL, return as is
-    if (base64String.startsWith('data:')) {
+  // =========================================================
+  // IMAGE CONVERTER
+  // =========================================================
+
+  const convertBase64ToDataURL = (
+      base64String,
+      mimeType = "image/jpeg"
+  ) => {
+    if (!base64String) {
+      return unplugged;
+    }
+
+    if (base64String.startsWith("data:")) {
       return base64String;
     }
-    
-    // If it's already a URL, return as is
-    if (base64String.startsWith('http')) {
+
+    if (base64String.startsWith("http")) {
       return base64String;
     }
-    
-    // Convert base64 string to data URL
+
     return `data:${mimeType};base64,${base64String}`;
   };
 
-  const handleAddToCart = (e, product) => {
-    e.preventDefault();
+  // =========================================================
+  // ADD TO CART
+  // =========================================================
+
+  const handleAddToCart = (product) => {
+    console.log("================================");
+    console.log("BUTTON CLICK EVENT");
+    console.log("ADD TO CART CLICKED");
+    console.log("PRODUCT:", product);
+    console.log("PRODUCT ID:", product?.id);
+    console.log("STOCK:", product?.stockQuantity);
+    console.log("ADD TO CART FUNCTION:", addToCart);
+    console.log("================================");
+
+    if (!product) {
+      console.error("Product is undefined");
+      return;
+    }
+
+    if (typeof addToCart !== "function") {
+      console.error("addToCart is not a function");
+      return;
+    }
+
+    // Add product to cart
     addToCart(product);
+
+    // Show toast
     setToastProduct(product);
     setShowToast(true);
   };
 
+  // =========================================================
+  // FILTER PRODUCTS
+  // =========================================================
+
   const filteredProducts = selectedCategory
-    ? data.filter((product) => product.category === selectedCategory)
-    : data;
+      ? data.filter(
+          (product) =>
+              product.category === selectedCategory
+      )
+      : data;
+
+  // =========================================================
+  // ERROR
+  // =========================================================
 
   if (isError) {
     return (
-      <div className="container d-flex justify-content-center align-items-center" style={{ height: "100vh" }}>
-        <div className="text-center">
-          <img src={unplugged} alt="Error" className="img-fluid" width="100" />
-          <h4 className="mt-3">Something went wrong</h4>
+        <div
+            className="container d-flex justify-content-center align-items-center"
+            style={{ height: "100vh" }}
+        >
+          <h4>Something went wrong</h4>
         </div>
-      </div>
     );
   }
-  
-  return (
-    <>
-      {/* Toast Notification */}
-      <div className="position-fixed top-0 end-0 p-3" style={{ zIndex: 1050 }}>
-        <div 
-          className={`toast ${showToast ? 'show' : 'hide'}`}
-          role="alert" 
-          aria-live="assertive" 
-          aria-atomic="true"
-        >
-          <div className="toast-header bg-success text-white">
-            <strong className="me-auto">Added to Cart</strong>
-            <button 
-              type="button" 
-              className="btn-close btn-close-white" 
-              onClick={() => setShowToast(false)}
-              aria-label="Close"
-            ></button>
-          </div>
-          <div className="toast-body">
-            {toastProduct && (
-              <div className="d-flex align-items-center">
-                <img 
-                  src={convertBase64ToDataURL(toastProduct.imageData)} 
-                  alt={toastProduct.name} 
-                  className="me-2 rounded" 
-                  width="40" 
-                  height="40"
-                  onError={(e) => {
-                    e.target.src = unplugged; // Fallback image
-                  }}
-                />
-                <div>
-                  <div className="fw-bold">{toastProduct.name}</div>
-                  <small>Successfully added to your cart!</small>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      <div className="container mt-5 pt-5">
-        <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-          {!filteredProducts || filteredProducts.length === 0 ? (
-            <div className="col-12 text-center my-5">
-              <h4>No Products Available</h4>
-            </div>
-          ) : (
-            filteredProducts.map((product) => {
-              const { id, brand, name, price, productAvailable, imageData, stockQuantity } = product;
-              
-              return (
-                <div className="col" key={id}>
-                  <div className={`card h-100 shadow-sm ${!productAvailable ? 'bg-light' : ''}`}>
-                    <Link to={`/product/${id}`} className="text-decoration-none text-dark">
-                      <img
-                        src={convertBase64ToDataURL(imageData)} 
-                        alt={name}
-                        className="card-img-top p-2"
-                        style={{ height: "150px", objectFit: "cover" }}
-                        onError={(e) => {
-                          e.target.src = unplugged; // Fallback image if conversion fails
-                        }}
-                      />
-                      <div className="card-body d-flex flex-column">
-                        <h5 className="card-title">{name.toUpperCase()}</h5>
-                        <p className="card-text text-muted fst-italic">~ {brand}</p>
-                        <hr />
-                        <div className="mt-auto">
-                          <h5 className="mb-2 fw-bold">
-                            <i className="bi bi-currency-rupee"></i>{price}
-                          </h5>
-                          <button
-                            className="btn btn-primary w-100"
-                            onClick={(e) => handleAddToCart(e, product)}
-                            disabled={!productAvailable || stockQuantity === 0}
-                          >
-                            {stockQuantity !== 0 ? "Add to Cart" : "Out of Stock"}
-                          </button>
-                        </div>
-                      </div>
-                    </Link>
+  // =========================================================
+  // PAGE
+  // =========================================================
+
+  return (
+      <>
+        {/* =====================================================
+          TOAST
+      ===================================================== */}
+
+        {showToast && toastProduct && (
+            <div
+                className="position-fixed top-0 end-0 p-3"
+                style={{
+                  zIndex: 99999,
+                }}
+            >
+              <div
+                  className="toast show"
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
+              >
+                <div className="toast-header">
+                  <strong className="me-auto">
+                    Added to Cart
+                  </strong>
+
+                  <button
+                      type="button"
+                      className="btn-close"
+                      onClick={() => setShowToast(false)}
+                      aria-label="Close"
+                  />
+                </div>
+
+                <div className="toast-body d-flex align-items-center">
+                  <img
+                      src={convertBase64ToDataURL(
+                          toastProduct.imageData,
+                          toastProduct.imageType ||
+                          "image/jpeg"
+                      )}
+                      alt={toastProduct.name}
+                      width="45"
+                      height="45"
+                      className="rounded me-2"
+                      style={{
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => {
+                        e.target.src = unplugged;
+                      }}
+                  />
+
+                  <div>
+                    <strong>
+                      {toastProduct.name}
+                    </strong>
+
+                    <div>
+                      Successfully added to cart!
+                    </div>
                   </div>
                 </div>
-              );
-            })
-          )}
+              </div>
+            </div>
+        )}
+
+        {/* =====================================================
+          PRODUCTS
+      ===================================================== */}
+
+        <div className="container mt-5 pt-5">
+
+          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+
+            {!Array.isArray(filteredProducts) ||
+            filteredProducts.length === 0 ? (
+                <div className="col-12 text-center py-5">
+                  <h4>No Products Available</h4>
+                </div>
+            ) : (
+                filteredProducts.map((product) => {
+                  const {
+                    id,
+                    name,
+                    brand,
+                    price,
+                    imageData,
+                    imageType,
+                    stockQuantity,
+                    productAvailable,
+                  } = product;
+
+                  return (
+                      <div
+                          className="col"
+                          key={id}
+                      >
+                        <div
+                            className={`card h-100 shadow-sm ${
+                                !productAvailable
+                                    ? "bg-light"
+                                    : ""
+                            }`}
+                        >
+
+                          {/* =================================================
+                        PRODUCT DETAILS LINK
+                    ================================================= */}
+
+                          <Link
+                              to={`/product/${id}`}
+                              className="text-decoration-none text-dark"
+                          >
+                            <img
+                                src={convertBase64ToDataURL(
+                                    imageData,
+                                    imageType ||
+                                    "image/jpeg"
+                                )}
+                                alt={name}
+                                className="card-img-top p-2"
+                                style={{
+                                  height: "200px",
+                                  objectFit: "cover",
+                                }}
+                                onError={(e) => {
+                                  e.target.src = unplugged;
+                                }}
+                            />
+
+                            <div className="card-body">
+
+                              <h5 className="card-title">
+                                {name
+                                    ? name.toUpperCase()
+                                    : "Product"}
+                              </h5>
+
+                              <p className="card-text text-muted fst-italic">
+                                ~ {brand}
+                              </p>
+
+                              <hr />
+
+                              <h5 className="fw-bold">
+                                ₹ {price}
+                              </h5>
+
+                              <p className="text-muted mb-0">
+                                Stock: {stockQuantity}
+                              </p>
+
+                            </div>
+                          </Link>
+
+                          {/* =================================================
+                        ADD TO CART BUTTON
+                    ================================================= */}
+
+                          <div className="card-body pt-0">
+
+                            <button
+                                type="button"
+                                className="btn btn-primary w-100"
+                                style={{
+                                  position: "relative",
+                                  zIndex: 9999,
+                                  pointerEvents: "auto",
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => {
+                                  console.log(
+                                      "BUTTON CLICK EVENT"
+                                  );
+
+                                  handleAddToCart(product);
+                                }}
+                            >
+                              Add to Cart
+                            </button>
+
+                          </div>
+
+                        </div>
+                      </div>
+                  );
+                })
+            )}
+
+          </div>
         </div>
-      </div>
-    </>
+      </>
   );
 };
 

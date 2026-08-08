@@ -1,175 +1,451 @@
-import axios from 'axios';
-import React, { useState } from 'react';
-import { Modal, Button, Form, Alert, Toast, ToastContainer } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import axios from "axios";
+import React, { useState } from "react";
+import {
+  Modal,
+  Button,
+  Form,
+  Toast,
+  ToastContainer,
+} from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import unplugged from "../assets/unplugged.png";
 
-const CheckoutPopup = ({ show, handleClose, cartItems, totalPrice }) => {
+const CheckoutPopup = ({
+                         show,
+                         handleClose,
+                         cartItems,
+                         totalPrice,
+                       }) => {
   const baseUrl = import.meta.env.VITE_BASE_URL;
   const navigate = useNavigate();
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [validated, setValidated] = useState(false);
+
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastVariant, setToastVariant] = useState('success');
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastVariant, setToastVariant] = useState("success");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // =========================================================
+  // IMAGE CONVERTER
+  // =========================================================
+
+  const convertBase64ToDataURL = (
+      base64String,
+      mimeType = "image/jpeg"
+  ) => {
+    if (!base64String) {
+      return unplugged;
+    }
+
+    if (base64String.startsWith("data:")) {
+      return base64String;
+    }
+
+    if (base64String.startsWith("http")) {
+      return base64String;
+    }
+
+    return `data:${mimeType};base64,${base64String}`;
+  };
+
+  // =========================================================
+  // PLACE ORDER
+  // =========================================================
 
   const handleConfirm = async (event) => {
     event.preventDefault();
+
     const form = event.currentTarget;
 
-    if (form.checkValidity() === false) {
+    console.log("================================");
+    console.log("CONFIRM PURCHASE CLICKED");
+    console.log("CART ITEMS:", cartItems);
+    console.log("TOTAL PRICE:", totalPrice);
+    console.log("NAME:", name);
+    console.log("EMAIL:", email);
+    console.log("================================");
+
+    if (!form.checkValidity()) {
       event.stopPropagation();
       setValidated(true);
+      return;
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+      setToastVariant("danger");
+      setToastMessage("Your cart is empty.");
+      setShowToast(true);
       return;
     }
 
     setValidated(true);
     setIsSubmitting(true);
 
-    const orderItems = cartItems.map(item => ({
-      productId: item.id,
-      quantity: item.quantity
+    // =========================================================
+    // CREATE ORDER ITEMS
+    // =========================================================
+
+    const orderItems = cartItems.map((item) => ({
+      productId: Number(item.id),
+      quantity: Number(item.quantity),
     }));
 
-    const data = {
+    // =========================================================
+    // ORDER REQUEST
+    // =========================================================
+
+    const orderData = {
       customerName: name,
       email: email,
-      items: orderItems
+      items: orderItems,
     };
 
+    console.log("ORDER DATA SENT TO BACKEND:");
+    console.log(orderData);
+
     try {
-      const response = await axios.post(`${baseUrl}/api/orders/place`, data);
-      console.log(response, 'order placed');
+      // =======================================================
+      // POST ORDER
+      // =======================================================
 
-      // Show success notification
-      setToastVariant('success');
-      setToastMessage('Order placed successfully!');
+      const response = await axios.post(
+          `${baseUrl}/api/orders/place`,
+          orderData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+      );
+
+      console.log("ORDER SUCCESS:");
+      console.log(response.data);
+
+      // =======================================================
+      // SUCCESS MESSAGE
+      // =======================================================
+
+      setToastVariant("success");
+
+      setToastMessage(
+          `Order ${response.data.orderId} placed successfully!`
+      );
+
       setShowToast(true);
 
-      // Clear cart and redirect after a short delay
-      localStorage.removeItem('cart');
+      // =======================================================
+      // CLEAR CART
+      // =======================================================
+
+      localStorage.removeItem("cart");
+
+      // Close checkout popup
+      handleClose();
+
+      // =======================================================
+      // REDIRECT
+      // =======================================================
+
       setTimeout(() => {
-        navigate('/');
-      }, 2000);
+        navigate("/");
+      }, 1500);
+
     } catch (error) {
-      console.log(error);
-      setToastVariant('danger');
-      setToastMessage('Failed to place order. Please try again.');
+      console.error("ERROR PLACING ORDER:", error);
+
+      if (error.response) {
+        console.error(
+            "Backend response:",
+            error.response.data
+        );
+
+        console.error(
+            "Status:",
+            error.response.status
+        );
+
+        console.error(
+            "Headers:",
+            error.response.headers
+        );
+      }
+
+      setToastVariant("danger");
+
+      let message = "Failed to place order.";
+
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        message = error.response.data.error;
+      }
+
+      setToastMessage(message);
       setShowToast(true);
+
     } finally {
       setIsSubmitting(false);
     }
   };
-  const convertBase64ToDataURL = (base64String, mimeType = 'image/jpeg') => {
-    if (!base64String) return unplugged; // Return fallback image if no data
 
-    // If it's already a data URL, return as is
-    if (base64String.startsWith('data:')) {
-      return base64String;
+  // =========================================================
+  // CLOSE
+  // =========================================================
+
+  const handleModalClose = () => {
+    if (isSubmitting) {
+      return;
     }
 
-    // If it's already a URL, return as is
-    if (base64String.startsWith('http')) {
-      return base64String;
-    }
-
-    // Convert base64 string to data URL
-    return `data:${mimeType};base64,${base64String}`;
+    setValidated(false);
+    handleClose();
   };
+
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
-    <>
-      <Modal show={show} onHide={handleClose} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Checkout</Modal.Title>
-        </Modal.Header>
-        <Form noValidate validated={validated} onSubmit={handleConfirm}>
-          <Modal.Body>
-            <div className="checkout-items mb-4">
-              {cartItems.map((item) => (
-                <div key={item.id} className="d-flex mb-3 border-bottom pb-3">
-                  <img
-                    src={convertBase64ToDataURL(item.imageData)}
-                    alt={item.name}
-                    className="me-3 rounded"
-                    style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                  />
-                  <div className="flex-grow-1">
-                    <h6 className="mb-1">{item.name}</h6>
-                    <p className="mb-1 small">Quantity: {item.quantity}</p>
-                    <p className="mb-0 small">Price: ₹{(item.price * item.quantity).toFixed(2)}</p>
+      <>
+        <Modal
+            show={show}
+            onHide={handleModalClose}
+            centered
+        >
+          <Form
+              noValidate
+              validated={validated}
+              onSubmit={handleConfirm}
+          >
+
+            <Modal.Header closeButton>
+              <Modal.Title>
+                Checkout
+              </Modal.Title>
+            </Modal.Header>
+
+            <Modal.Body>
+
+              {/* =================================================
+                CART ITEMS
+            ================================================= */}
+
+              {cartItems && cartItems.length > 0 ? (
+                  <div className="mb-4">
+
+                    {cartItems.map((item) => (
+                        <div
+                            key={item.id}
+                            className="d-flex align-items-center mb-3 p-2 border rounded"
+                        >
+
+                          <img
+                              src={convertBase64ToDataURL(
+                                  item.imageData,
+                                  item.imageType ||
+                                  "image/jpeg"
+                              )}
+                              alt={item.name}
+                              width="70"
+                              height="70"
+                              className="rounded me-3"
+                              style={{
+                                objectFit: "cover",
+                              }}
+                              onError={(e) => {
+                                e.target.src =
+                                    unplugged;
+                              }}
+                          />
+
+                          <div className="flex-grow-1">
+
+                            <h6 className="mb-1">
+                              {item.name}
+                            </h6>
+
+                            <div className="text-muted">
+                              Quantity:{" "}
+                              {item.quantity}
+                            </div>
+
+                            <div className="fw-bold">
+                              ₹{" "}
+                              {(
+                                  Number(item.price) *
+                                  Number(item.quantity)
+                              ).toFixed(2)}
+                            </div>
+
+                          </div>
+
+                        </div>
+                    ))}
+
                   </div>
-                </div>
-              ))}
+              ) : (
+                  <div className="alert alert-warning">
+                    Your cart is empty.
+                  </div>
+              )}
+
+              {/* =================================================
+                TOTAL
+            ================================================= */}
 
               <div className="text-center my-4">
-                <h5 className="fw-bold">Total: ₹{totalPrice.toFixed(2)}</h5>
+
+                <h5 className="fw-bold">
+                  Total: ₹
+                  {Number(totalPrice).toFixed(2)}
+                </h5>
+
               </div>
 
+              {/* =================================================
+                NAME
+            ================================================= */}
+
               <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
+                <Form.Label>
+                  Name
+                </Form.Label>
+
                 <Form.Control
-                  type="text"
-                  placeholder="Enter your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+                    type="text"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) =>
+                        setName(e.target.value)
+                    }
+                    required
+                    disabled={isSubmitting}
                 />
+
                 <Form.Control.Feedback type="invalid">
                   Please provide your name.
                 </Form.Control.Feedback>
               </Form.Group>
 
+              {/* =================================================
+                EMAIL
+            ================================================= */}
+
               <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
+                <Form.Label>
+                  Email
+                </Form.Label>
+
                 <Form.Control
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) =>
+                        setEmail(e.target.value)
+                    }
+                    required
+                    disabled={isSubmitting}
                 />
+
                 <Form.Control.Feedback type="invalid">
                   Please provide a valid email address.
                 </Form.Control.Feedback>
               </Form.Group>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
-              Close
-            </Button>
-            <Button variant="primary" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Processing...
-                </>
-              ) : 'Confirm Purchase'}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
 
-      {/* Toast notification */}
-      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 1070 }}>
-        <Toast
-          show={showToast}
-          onClose={() => setShowToast(false)}
-          delay={3000}
-          autohide
-          bg={toastVariant}
+            </Modal.Body>
+
+            {/* =================================================
+              FOOTER
+          ================================================= */}
+
+            <Modal.Footer>
+
+              <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={handleModalClose}
+                  disabled={isSubmitting}
+              >
+                Close
+              </Button>
+
+              <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={
+                      isSubmitting ||
+                      !cartItems ||
+                      cartItems.length === 0
+                  }
+              >
+
+                {isSubmitting ? (
+                    <>
+                  <span
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                  />
+
+                      Processing...
+                    </>
+                ) : (
+                    "Confirm Purchase"
+                )}
+
+              </Button>
+
+            </Modal.Footer>
+
+          </Form>
+        </Modal>
+
+        {/* =====================================================
+          TOAST
+      ===================================================== */}
+
+        <ToastContainer
+            position="top-end"
+            className="p-3"
+            style={{
+              zIndex: 1070,
+            }}
         >
-          <Toast.Header closeButton>
-            <strong className="me-auto">Order Status</strong>
-          </Toast.Header>
-          <Toast.Body className={toastVariant === 'success' ? 'text-white' : ''}>
-            {toastMessage}
-          </Toast.Body>
-        </Toast>
-      </ToastContainer>
-    </>
+
+          <Toast
+              show={showToast}
+              onClose={() =>
+                  setShowToast(false)
+              }
+              delay={3000}
+              autohide
+              bg={toastVariant}
+          >
+
+            <Toast.Header>
+              <strong className="me-auto">
+                Order Status
+              </strong>
+            </Toast.Header>
+
+            <Toast.Body
+                className={
+                  toastVariant === "success"
+                      ? "text-white"
+                      : ""
+                }
+            >
+              {toastMessage}
+            </Toast.Body>
+
+          </Toast>
+
+        </ToastContainer>
+      </>
   );
 };
 

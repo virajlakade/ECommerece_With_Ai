@@ -5,69 +5,324 @@ const AppContext = createContext({
   data: [],
   isError: "",
   cart: [],
-  addToCart: (product) => {},
-  removeFromCart: (productId) => {},
-  refreshData:() =>{},
-  updateStockQuantity: (productId, newQuantity) =>{}
-  
+  addToCart: () => {},
+  removeFromCart: () => {},
+  clearCart: () => {},
+  refreshData: () => {},
+  updateStockQuantity: () => {},
 });
 
 export const AppProvider = ({ children }) => {
   const [data, setData] = useState([]);
   const [isError, setIsError] = useState("");
-  const [cart, setCart] = useState(JSON.parse(localStorage.getItem('cart')) || []);
+
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem("cart");
+
+      return savedCart
+          ? JSON.parse(savedCart)
+          : [];
+    } catch (error) {
+      console.error(
+          "Error loading cart from localStorage:",
+          error
+      );
+
+      return [];
+    }
+  });
+
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
+
+  // =========================================================
+  // ADD TO CART
+  // =========================================================
+
   const addToCart = (product) => {
-    const existingProductIndex = cart.findIndex((item) => item.id === product.id);
-    if (existingProductIndex !== -1) {
-      const updatedCart = cart.map((item, index) =>
-        index === existingProductIndex
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
+
+    console.log(
+        "ADD TO CART CLICKED:",
+        product
+    );
+
+    setCart((previousCart) => {
+
+      const existingProduct =
+          previousCart.find(
+              (item) =>
+                  item.id === product.id
+          );
+
+
+      // =====================================================
+      // PRODUCT ALREADY EXISTS
+      // =====================================================
+
+      if (existingProduct) {
+
+        const currentQuantity =
+            Number(
+                existingProduct.quantity || 1
+            );
+
+        const stockQuantity =
+            Number(
+                product.stockQuantity || 0
+            );
+
+
+        // Don't exceed stock
+        if (
+            currentQuantity >= stockQuantity
+        ) {
+
+          console.log(
+              "Cannot add more than available stock"
+          );
+
+          return previousCart;
+        }
+
+
+        const updatedCart =
+            previousCart.map((item) => {
+
+              if (
+                  item.id === product.id
+              ) {
+
+                return {
+                  ...item,
+                  quantity:
+                      currentQuantity + 1,
+                };
+
+              }
+
+              return item;
+            });
+
+
+        console.log(
+            "UPDATED CART:",
+            updatedCart
+        );
+
+        return updatedCart;
+      }
+
+
+      // =====================================================
+      // NEW PRODUCT
+      // =====================================================
+
+      const updatedCart = [
+        ...previousCart,
+        {
+          ...product,
+          quantity: 1,
+        },
+      ];
+
+
+      console.log(
+          "NEW CART:",
+          updatedCart
       );
-      setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-    } else {
-      const updatedCart = [...cart, { ...product, quantity: 1 }];
-      setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-    }
+
+      return updatedCart;
+    });
   };
+
+
+  // =========================================================
+  // REMOVE FROM CART
+  // =========================================================
 
   const removeFromCart = (productId) => {
-    console.log("productID",productId)
-    const updatedCart = cart.filter((item) => item.id !== productId);
-    setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    console.log("CART",cart)
+
+    console.log(
+        "Removing product:",
+        productId
+    );
+
+    setCart((previousCart) => {
+
+      const updatedCart =
+          previousCart.filter(
+              (item) =>
+                  item.id !== productId
+          );
+
+      console.log(
+          "CART AFTER REMOVE:",
+          updatedCart
+      );
+
+      return updatedCart;
+    });
   };
 
+
+  // =========================================================
+  // CLEAR CART
+  // =========================================================
+
+  const clearCart = () => {
+
+    console.log(
+        "Clearing cart"
+    );
+
+    setCart([]);
+
+    localStorage.removeItem("cart");
+  };
+
+
+  // =========================================================
+  // UPDATE STOCK QUANTITY
+  // =========================================================
+
+  const updateStockQuantity = (
+      productId,
+      newQuantity
+  ) => {
+
+    setData((previousData) =>
+        previousData.map((product) => {
+
+          if (
+              product.id === productId
+          ) {
+
+            return {
+              ...product,
+              stockQuantity:
+              newQuantity,
+            };
+
+          }
+
+          return product;
+        })
+    );
+
+
+    setCart((previousCart) =>
+        previousCart.map((item) => {
+
+          if (
+              item.id === productId
+          ) {
+
+            return {
+              ...item,
+              stockQuantity:
+              newQuantity,
+            };
+
+          }
+
+          return item;
+        })
+    );
+  };
+
+
+  // =========================================================
+  // REFRESH PRODUCTS
+  // =========================================================
+
   const refreshData = async () => {
+
     try {
-      const response = await axios.get(`${baseUrl}/api/products`);
-      setData(response.data);
+
+      setIsError("");
+
+      const response =
+          await axios.get(
+              `${baseUrl}/api/products`
+          );
+
+      console.log(
+          "Products fetched:",
+          response.data
+      );
+
+      setData(
+          Array.isArray(response.data)
+              ? response.data
+              : []
+      );
+
     } catch (error) {
-      setIsError(error.message);
+
+      console.error(
+          "Error fetching products:",
+          error
+      );
+
+      setIsError(
+          error.response?.data ||
+          error.message ||
+          "Failed to fetch products"
+      );
     }
   };
 
-  const clearCart =() =>{
-    setCart([]);
-  }
-  
-  useEffect(() => {
-    refreshData();
-  }, []);
+
+  // =========================================================
+  // INITIAL PRODUCT FETCH
+  // =========================================================
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
+
+    refreshData();
+
+  }, []);
+
+
+  // =========================================================
+  // SAVE CART TO LOCAL STORAGE
+  // =========================================================
+
+  useEffect(() => {
+
+    console.log(
+        "Saving cart:",
+        cart
+    );
+
+    localStorage.setItem(
+        "cart",
+        JSON.stringify(cart)
+    );
+
   }, [cart]);
-  
+
+
+  // =========================================================
+  // PROVIDER
+  // =========================================================
+
   return (
-    <AppContext.Provider value={{ data, isError, cart, addToCart, removeFromCart,refreshData, clearCart  }}>
-      {children}
-    </AppContext.Provider>
+      <AppContext.Provider
+          value={{
+            data,
+            isError,
+            cart,
+            addToCart,
+            removeFromCart,
+            clearCart,
+            refreshData,
+            updateStockQuantity,
+          }}
+      >
+        {children}
+      </AppContext.Provider>
   );
 };
 

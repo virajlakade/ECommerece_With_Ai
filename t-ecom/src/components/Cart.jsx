@@ -1,251 +1,509 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import AppContext from "../Context/Context.jsx";
 import axios from "axios";
 import CheckoutPopup from "./CheckoutPopup.jsx";
-import { Button } from 'react-bootstrap';
+import { Button } from "react-bootstrap";
+import { toast } from "react-toastify";
 
 const Cart = () => {
-  const { cart, removeFromCart, clearCart } = useContext(AppContext);
+  const {
+    cart,
+    removeFromCart,
+    clearCart,
+  } = useContext(AppContext);
+
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [cartImage, setCartImage] = useState([]);
   const [showModal, setShowModal] = useState(false);
 
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
-  useEffect(() => {
-    const fetchImagesAndUpdateCart = async () => {
-      console.log("Cart", cart);
-      try {
-        const response = await axios.get(`${baseUrl}/api/products`);
-        console.log("cart", cart);
-        setCartItems(cart);
-      } catch (error) {
-        console.error("Error fetching product data:", error);
-      }
-    };
+  // =========================================================
+  // SYNC CART FROM CONTEXT
+  // =========================================================
 
-    if (cart.length) {
-      fetchImagesAndUpdateCart();
+  useEffect(() => {
+    console.log("Cart from Context:", cart);
+
+    if (Array.isArray(cart)) {
+      setCartItems(cart);
     } else {
       setCartItems([]);
     }
   }, [cart]);
 
+
+  // =========================================================
+  // CALCULATE TOTAL
+  // =========================================================
+
   useEffect(() => {
     const total = cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0
+        (acc, item) =>
+            acc +
+            Number(item.price || 0) *
+            Number(item.quantity || 1),
+        0
     );
+
     setTotalPrice(total);
   }, [cartItems]);
 
-  const converUrlToFile = async (blobData, fileName) => {
-    const file = new File([blobData], fileName, { type: blobData.type });
-    return file;
-  };
 
-  const handleIncreaseQuantity = (itemId) => {
-    const newCartItems = cartItems.map((item) => {
-      if (item.id === itemId) {
-        if (item.quantity < item.stockQuantity) {
-          return { ...item, quantity: item.quantity + 1 };
-        } else {
-          toast.info("Cannot add more than available stock");
-        }
-      }
-      return item;
-    });
-    setCartItems(newCartItems);
-  };
+  // =========================================================
+  // IMAGE
+  // =========================================================
 
-  const handleDecreaseQuantity = (itemId) => {
-    const newCartItems = cartItems.map((item) =>
-      item.id === itemId
-        ? { ...item, quantity: Math.max(item.quantity - 1, 1) }
-        : item
-    );
-    setCartItems(newCartItems);
-  };
+  const convertBase64ToDataURL = (
+      base64String,
+      mimeType = "image/jpeg"
+  ) => {
+    if (!base64String) {
+      return "";
+    }
 
-  const handleRemoveFromCart = (itemId) => {
-    removeFromCart(itemId);
-    const newCartItems = cartItems.filter((item) => item.id !== itemId);
-    setCartItems(newCartItems);
-  };
-  const convertBase64ToDataURL = (base64String, mimeType = 'image/jpeg') => {
-    if (!base64String) return unplugged; // Return fallback image if no data
-
-    // If it's already a data URL, return as is
-    if (base64String.startsWith('data:')) {
+    if (base64String.startsWith("data:")) {
       return base64String;
     }
 
-    // If it's already a URL, return as is
-    if (base64String.startsWith('http')) {
+    if (base64String.startsWith("http")) {
       return base64String;
     }
 
-    // Convert base64 string to data URL
     return `data:${mimeType};base64,${base64String}`;
   };
+
+
+  // =========================================================
+  // INCREASE QUANTITY
+  // =========================================================
+
+  const handleIncreaseQuantity = (itemId) => {
+    setCartItems((prevItems) =>
+        prevItems.map((item) => {
+
+          if (item.id !== itemId) {
+            return item;
+          }
+
+          const currentQuantity =
+              Number(item.quantity || 1);
+
+          const stockQuantity =
+              Number(item.stockQuantity || 0);
+
+          if (currentQuantity >= stockQuantity) {
+            toast.info(
+                "Cannot add more than available stock"
+            );
+
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity: currentQuantity + 1,
+          };
+        })
+    );
+  };
+
+
+  // =========================================================
+  // DECREASE QUANTITY
+  // =========================================================
+
+  const handleDecreaseQuantity = (itemId) => {
+    setCartItems((prevItems) =>
+        prevItems.map((item) => {
+
+          if (item.id !== itemId) {
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity: Math.max(
+                Number(item.quantity || 1) - 1,
+                1
+            ),
+          };
+        })
+    );
+  };
+
+
+  // =========================================================
+  // REMOVE FROM CART
+  // =========================================================
+
+  const handleRemoveFromCart = (itemId) => {
+
+    removeFromCart(itemId);
+
+    setCartItems((prevItems) =>
+        prevItems.filter(
+            (item) => item.id !== itemId
+        )
+    );
+
+    toast.success("Product removed from cart");
+  };
+
+
+  // =========================================================
+  // CHECKOUT
+  // =========================================================
+
   const handleCheckout = async () => {
+
     try {
-      for (const item of cartItems) {
-        const { imageUrl, imageName, imageData, imageType, quantity, ...rest } = item;
-        const updatedStockQuantity = item.stockQuantity - item.quantity;
 
-        const updatedProductData = { ...rest, stockQuantity: updatedStockQuantity };
-        console.log("updated product data", updatedProductData);
-
-        const cartProduct = new FormData();
-        cartProduct.append("imageFile", cartImage);
-        cartProduct.append(
-          "product",
-          new Blob([JSON.stringify(updatedProductData)], { type: "application/json" })
-        );
-
-        await axios
-          .put(`${baseUrl}/api/product/${item.id}`, cartProduct, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          })
-          .then((response) => {
-            console.log("Product updated successfully:", (cartProduct));
-          })
-          .catch((error) => {
-            console.error("Error updating product:", error);
-          });
+      if (cartItems.length === 0) {
+        toast.info("Your cart is empty");
+        return;
       }
+
+      /*
+       * IMPORTANT:
+       *
+       * Do NOT update products one by one here.
+       *
+       * Your backend already has:
+       *
+       * POST /api/orders/place
+       *
+       * which reduces stock when an order is placed.
+       *
+       * CheckoutPopup should create the order.
+       */
+
+      console.log(
+          "Checkout cart:",
+          cartItems
+      );
+
       clearCart();
+
       setCartItems([]);
+
       setShowModal(false);
+
     } catch (error) {
-      console.log("error during checkout", error);
+
+      console.error(
+          "Error during checkout:",
+          error
+      );
+
+      toast.error(
+          "Checkout failed"
+      );
     }
   };
 
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
-    <div className="container mt-5 pt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-10">
-          <div className="card shadow">
-            <div className="card-header bg-white">
-              <h4 className="mb-0">Shopping Cart</h4>
-            </div>
-            <div className="card-body">
-              {cartItems.length === 0 ? (
+      <div className="container mt-5 pt-5">
+
+        <div className="row">
+
+          <div className="col-12">
+
+            <h2 className="mb-4">
+              Shopping Cart
+            </h2>
+
+
+            {/* EMPTY CART */}
+
+            {cartItems.length === 0 ? (
+
                 <div className="text-center py-5">
-                  <i className="bi bi-cart-x fs-1 text-muted"></i>
-                  <h5 className="mt-3">Your cart is empty</h5>
-                  <a href="/" className="btn btn-primary mt-3">Continue Shopping</a>
+
+                  <h4>
+                    Your cart is empty
+                  </h4>
+
+                  <Button
+                      variant="primary"
+                      onClick={() => {
+                        window.location.href = "/";
+                      }}
+                  >
+                    Continue Shopping
+                  </Button>
+
                 </div>
-              ) : (
+
+            ) : (
+
                 <>
+
+                  {/* CART TABLE */}
+
                   <div className="table-responsive">
-                    <table className="table table-hover align-middle">
+
+                    <table className="table align-middle">
+
                       <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Price</th>
-                          <th>Quantity</th>
-                          <th>Total</th>
-                          <th>Action</th>
-                        </tr>
+
+                      <tr>
+
+                        <th>
+                          Product
+                        </th>
+
+                        <th>
+                          Price
+                        </th>
+
+                        <th>
+                          Quantity
+                        </th>
+
+                        <th>
+                          Total
+                        </th>
+
+                        <th>
+                          Action
+                        </th>
+
+                      </tr>
+
                       </thead>
+
+
                       <tbody>
-                        {cartItems.map((item) => (
+
+                      {cartItems.map((item) => (
+
                           <tr key={item.id}>
+
+                            {/* PRODUCT */}
+
                             <td>
+
                               <div className="d-flex align-items-center">
-                                <img
-                                  src={convertBase64ToDataURL(item.imageData)}
-                                  alt={item.name}
-                                  className="rounded me-3"
-                                  width="80"
-                                  height="80"
-                                  style={{ objectFit: "cover" }}
-                                />
+
+                                {item.imageData ? (
+
+                                    <img
+                                        src={convertBase64ToDataURL(
+                                            item.imageData,
+                                            item.imageType ||
+                                            "image/jpeg"
+                                        )}
+                                        alt={item.name}
+                                        className="rounded me-3"
+                                        width="80"
+                                        height="80"
+                                        style={{
+                                          objectFit: "cover",
+                                        }}
+                                    />
+
+                                ) : (
+
+                                    <div
+                                        className="rounded me-3 bg-light d-flex align-items-center justify-content-center"
+                                        style={{
+                                          width: "80px",
+                                          height: "80px",
+                                        }}
+                                    >
+                                      No Image
+                                    </div>
+
+                                )}
+
+
                                 <div>
-                                  <h6 className="mb-0">{item.name}</h6>
-                                  <small className="text-muted">{item.brand}</small>
+
+                                  <strong>
+                                    {item.name}
+                                  </strong>
+
+                                  <div className="text-muted">
+                                    {item.brand}
+                                  </div>
+
                                 </div>
+
                               </div>
+
                             </td>
-                            <td>₹ {item.price}</td>
+
+
+                            {/* PRICE */}
+
                             <td>
-                              <div className="input-group input-group-sm" style={{ width: "120px" }}>
-                                <button
-                                  className="btn btn-outline-secondary"
-                                  type="button"
-                                  onClick={() => handleDecreaseQuantity(item.id)}
-                                >
-                                  <i className="bi bi-dash"></i>
-                                </button>
-                                <input
-                                  type="text"
-                                  className="form-control text-center"
-                                  value={item.quantity}
-                                  readOnly
-                                />
-                                <button
-                                  className="btn btn-outline-secondary"
-                                  type="button"
-                                  onClick={() => handleIncreaseQuantity(item.id)}
-                                >
-                                  <i className="bi bi-plus"></i>
-                                </button>
-                              </div>
+                              ₹{" "}
+                              {Number(
+                                  item.price || 0
+                              ).toFixed(2)}
                             </td>
-                            <td className="fw-bold">₹ {(item.price * item.quantity).toFixed(2)}</td>
+
+
+                            {/* QUANTITY */}
+
                             <td>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleRemoveFromCart(item.id)}
+
+                              <div
+                                  className="input-group input-group-sm"
+                                  style={{
+                                    width: "120px",
+                                  }}
                               >
-                                <i className="bi bi-trash"></i>
-                              </button>
+
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    type="button"
+                                    onClick={() =>
+                                        handleDecreaseQuantity(
+                                            item.id
+                                        )
+                                    }
+                                >
+                                  -
+                                </button>
+
+
+                                <input
+                                    type="text"
+                                    className="form-control text-center"
+                                    value={
+                                        item.quantity || 1
+                                    }
+                                    readOnly
+                                />
+
+
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    type="button"
+                                    onClick={() =>
+                                        handleIncreaseQuantity(
+                                            item.id
+                                        )
+                                    }
+                                >
+                                  +
+                                </button>
+
+                              </div>
+
                             </td>
+
+
+                            {/* TOTAL */}
+
+                            <td>
+
+                              ₹{" "}
+                              {(
+                                  Number(item.price || 0) *
+                                  Number(item.quantity || 1)
+                              ).toFixed(2)}
+
+                            </td>
+
+
+                            {/* REMOVE */}
+
+                            <td>
+
+                              <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() =>
+                                      handleRemoveFromCart(
+                                          item.id
+                                      )
+                                  }
+                              >
+                                Remove
+                              </button>
+
+                            </td>
+
                           </tr>
-                        ))}
+
+                      ))}
+
                       </tbody>
+
                     </table>
+
                   </div>
+
+
+                  {/* TOTAL */}
 
                   <div className="card mt-3">
+
                     <div className="card-body">
+
                       <div className="d-flex justify-content-between align-items-center">
-                        <h5 className="mb-0">Total:</h5>
-                        <h5 className="mb-0">₹ {totalPrice.toFixed(2)}</h5>
+
+                        <h5 className="mb-0">
+                          Total:
+                        </h5>
+
+                        <h5 className="mb-0">
+                          ₹{" "}
+                          {totalPrice.toFixed(2)}
+                        </h5>
+
                       </div>
+
                     </div>
+
                   </div>
 
+
+                  {/* CHECKOUT */}
+
                   <div className="d-grid mt-4">
+
                     <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={() => setShowModal(true)}
+                        variant="primary"
+                        size="lg"
+                        onClick={() =>
+                            setShowModal(true)
+                        }
                     >
                       Proceed to Checkout
                     </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <CheckoutPopup
-        show={showModal}
-        handleClose={() => setShowModal(false)}
-        cartItems={cartItems}
-        totalPrice={totalPrice}
-        handleCheckout={handleCheckout}
-      />
-    </div>
+                  </div>
+
+                </>
+
+            )}
+
+          </div>
+
+        </div>
+
+
+        {/* CHECKOUT POPUP */}
+
+        <CheckoutPopup
+            show={showModal}
+            handleClose={() =>
+                setShowModal(false)
+            }
+            cartItems={cartItems}
+            totalPrice={totalPrice}
+            handleCheckout={handleCheckout}
+        />
+
+      </div>
   );
 };
 
