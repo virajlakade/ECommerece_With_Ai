@@ -1,510 +1,530 @@
 import React, { useContext, useEffect, useState } from "react";
 import AppContext from "../Context/Context.jsx";
-import axios from "axios";
 import CheckoutPopup from "./CheckoutPopup.jsx";
 import { Button } from "react-bootstrap";
 import { toast } from "react-toastify";
 
 const Cart = () => {
-  const {
-    cart,
-    removeFromCart,
-    clearCart,
-  } = useContext(AppContext);
+    const {
+        cart,
+        removeFromCart,
+        clearCart,
+        addToCart,
+    } = useContext(AppContext);
 
-  const [cartItems, setCartItems] = useState([]);
-  const [totalPrice, setTotalPrice] = useState(0);
-  const [showModal, setShowModal] = useState(false);
+    const [cartItems, setCartItems] = useState([]);
+    const [totalPrice, setTotalPrice] = useState(0);
+    const [showModal, setShowModal] = useState(false);
 
-  const baseUrl = import.meta.env.VITE_BASE_URL;
+    // =========================================================
+    // SYNC CART FROM CONTEXT
+    // =========================================================
 
-  // =========================================================
-  // SYNC CART FROM CONTEXT
-  // =========================================================
+    useEffect(() => {
+        console.log("Cart from Context:", cart);
 
-  useEffect(() => {
-    console.log("Cart from Context:", cart);
+        if (Array.isArray(cart)) {
+            setCartItems(cart);
+        } else {
+            setCartItems([]);
+        }
+    }, [cart]);
 
-    if (Array.isArray(cart)) {
-      setCartItems(cart);
-    } else {
-      setCartItems([]);
-    }
-  }, [cart]);
+    // =========================================================
+    // CALCULATE TOTAL
+    // =========================================================
 
+    useEffect(() => {
+        const total = cartItems.reduce(
+            (acc, item) =>
+                acc +
+                Number(item.price || 0) *
+                Number(item.quantity || 1),
+            0
+        );
 
-  // =========================================================
-  // CALCULATE TOTAL
-  // =========================================================
+        setTotalPrice(total);
+    }, [cartItems]);
 
-  useEffect(() => {
-    const total = cartItems.reduce(
-        (acc, item) =>
-            acc +
-            Number(item.price || 0) *
-            Number(item.quantity || 1),
-        0
-    );
+    // =========================================================
+    // IMAGE
+    // =========================================================
 
-    setTotalPrice(total);
-  }, [cartItems]);
+    const convertBase64ToDataURL = (
+        base64String,
+        mimeType = "image/jpeg"
+    ) => {
+        if (!base64String) {
+            return "";
+        }
 
+        if (base64String.startsWith("data:")) {
+            return base64String;
+        }
 
-  // =========================================================
-  // IMAGE
-  // =========================================================
+        if (base64String.startsWith("http")) {
+            return base64String;
+        }
 
-  const convertBase64ToDataURL = (
-      base64String,
-      mimeType = "image/jpeg"
-  ) => {
-    if (!base64String) {
-      return "";
-    }
+        return `data:${mimeType};base64,${base64String}`;
+    };
 
-    if (base64String.startsWith("data:")) {
-      return base64String;
-    }
+    // =========================================================
+    // INCREASE QUANTITY
+    // =========================================================
 
-    if (base64String.startsWith("http")) {
-      return base64String;
-    }
+    const handleIncreaseQuantity = (item) => {
+        const currentQuantity = Number(
+            item.quantity || 1
+        );
 
-    return `data:${mimeType};base64,${base64String}`;
-  };
+        const stockQuantity = Number(
+            item.stockQuantity || 0
+        );
 
-
-  // =========================================================
-  // INCREASE QUANTITY
-  // =========================================================
-
-  const handleIncreaseQuantity = (itemId) => {
-    setCartItems((prevItems) =>
-        prevItems.map((item) => {
-
-          if (item.id !== itemId) {
-            return item;
-          }
-
-          const currentQuantity =
-              Number(item.quantity || 1);
-
-          const stockQuantity =
-              Number(item.stockQuantity || 0);
-
-          if (currentQuantity >= stockQuantity) {
+        if (currentQuantity >= stockQuantity) {
             toast.info(
                 "Cannot add more than available stock"
             );
+            return;
+        }
+
+        // addToCart automatically increases quantity
+        addToCart(item);
+    };
+
+    // =========================================================
+    // DECREASE QUANTITY
+    // =========================================================
+
+    const handleDecreaseQuantity = (item) => {
+        const currentQuantity = Number(
+            item.quantity || 1
+        );
+
+        if (currentQuantity <= 1) {
+            return;
+        }
+
+        // Remove one quantity from Context cart
+        const updatedCart = cart.map((cartItem) => {
+            if (cartItem.id === item.id) {
+                return {
+                    ...cartItem,
+                    quantity: currentQuantity - 1,
+                };
+            }
+
+            return cartItem;
+        });
+
+        // Update localStorage and Context indirectly
+        localStorage.setItem(
+            "cart",
+            JSON.stringify(updatedCart)
+        );
+
+        // Since Context doesn't currently expose
+        // a direct setCart function, reload the page
+        // state through localStorage.
+        window.location.reload();
+    };
+
+    // =========================================================
+    // REMOVE FROM CART
+    // =========================================================
 
-            return item;
-          }
+    const handleRemoveFromCart = (itemId) => {
+        removeFromCart(itemId);
 
-          return {
-            ...item,
-            quantity: currentQuantity + 1,
-          };
-        })
-    );
-  };
+        toast.success(
+            "Product removed from cart"
+        );
+    };
 
+    // =========================================================
+    // CHECKOUT
+    // =========================================================
 
-  // =========================================================
-  // DECREASE QUANTITY
-  // =========================================================
+    const handleCheckout = async () => {
+        try {
+            if (cartItems.length === 0) {
+                toast.info(
+                    "Your cart is empty"
+                );
+                return;
+            }
 
-  const handleDecreaseQuantity = (itemId) => {
-    setCartItems((prevItems) =>
-        prevItems.map((item) => {
+            console.log(
+                "Checkout cart:",
+                cartItems
+            );
 
-          if (item.id !== itemId) {
-            return item;
-          }
+            /*
+             * CheckoutPopup handles
+             * order creation.
+             */
 
-          return {
-            ...item,
-            quantity: Math.max(
-                Number(item.quantity || 1) - 1,
-                1
-            ),
-          };
-        })
-    );
-  };
+            clearCart();
 
+            setCartItems([]);
 
-  // =========================================================
-  // REMOVE FROM CART
-  // =========================================================
+            setShowModal(false);
 
-  const handleRemoveFromCart = (itemId) => {
+        } catch (error) {
+            console.error(
+                "Error during checkout:",
+                error
+            );
 
-    removeFromCart(itemId);
+            toast.error(
+                "Checkout failed"
+            );
+        }
+    };
 
-    setCartItems((prevItems) =>
-        prevItems.filter(
-            (item) => item.id !== itemId
-        )
-    );
+    // =========================================================
+    // RENDER
+    // =========================================================
 
-    toast.success("Product removed from cart");
-  };
+    return (
+        <div className="container mt-5 pt-5">
 
+            <div className="row">
 
-  // =========================================================
-  // CHECKOUT
-  // =========================================================
+                <div className="col-12">
 
-  const handleCheckout = async () => {
+                    <h2 className="mb-4">
+                        Shopping Cart
+                    </h2>
 
-    try {
+                    {/* =================================================
+              EMPTY CART
+          ================================================= */}
 
-      if (cartItems.length === 0) {
-        toast.info("Your cart is empty");
-        return;
-      }
+                    {cartItems.length === 0 ? (
 
-      /*
-       * IMPORTANT:
-       *
-       * Do NOT update products one by one here.
-       *
-       * Your backend already has:
-       *
-       * POST /api/orders/place
-       *
-       * which reduces stock when an order is placed.
-       *
-       * CheckoutPopup should create the order.
-       */
+                        <div className="text-center py-5">
 
-      console.log(
-          "Checkout cart:",
-          cartItems
-      );
+                            <h4>
+                                Your cart is empty
+                            </h4>
 
-      clearCart();
+                            <Button
+                                variant="primary"
+                                onClick={() => {
+                                    window.location.href = "/";
+                                }}
+                            >
+                                Continue Shopping
+                            </Button>
 
-      setCartItems([]);
+                        </div>
 
-      setShowModal(false);
+                    ) : (
 
-    } catch (error) {
+                        <>
 
-      console.error(
-          "Error during checkout:",
-          error
-      );
+                            {/* =================================================
+                  CART TABLE
+              ================================================= */}
 
-      toast.error(
-          "Checkout failed"
-      );
-    }
-  };
+                            <div className="table-responsive">
 
+                                <table className="table align-middle">
 
-  // =========================================================
-  // RENDER
-  // =========================================================
+                                    <thead>
 
-  return (
-      <div className="container mt-5 pt-5">
+                                    <tr>
 
-        <div className="row">
+                                        <th>
+                                            Product
+                                        </th>
 
-          <div className="col-12">
+                                        <th>
+                                            Price
+                                        </th>
 
-            <h2 className="mb-4">
-              Shopping Cart
-            </h2>
+                                        <th>
+                                            Quantity
+                                        </th>
 
+                                        <th>
+                                            Total
+                                        </th>
 
-            {/* EMPTY CART */}
+                                        <th>
+                                            Action
+                                        </th>
 
-            {cartItems.length === 0 ? (
+                                    </tr>
 
-                <div className="text-center py-5">
+                                    </thead>
 
-                  <h4>
-                    Your cart is empty
-                  </h4>
+                                    <tbody>
 
-                  <Button
-                      variant="primary"
-                      onClick={() => {
-                        window.location.href = "/";
-                      }}
-                  >
-                    Continue Shopping
-                  </Button>
+                                    {cartItems.map((item) => (
 
-                </div>
+                                        <tr key={item.id}>
 
-            ) : (
+                                            {/* =========================================
+                            PRODUCT
+                        ========================================= */}
 
-                <>
+                                            <td>
 
-                  {/* CART TABLE */}
+                                                <div className="d-flex align-items-center">
 
-                  <div className="table-responsive">
+                                                    {item.productImage ? (
 
-                    <table className="table align-middle">
+                                                        <img
+                                                            src={convertBase64ToDataURL(
+                                                                item.productImage,
+                                                                item.imageType ||
+                                                                "image/jpeg"
+                                                            )}
+                                                            alt={item.name}
+                                                            className="rounded me-3"
+                                                            width="80"
+                                                            height="80"
+                                                            style={{
+                                                                objectFit: "cover",
+                                                            }}
+                                                            onError={(e) => {
+                                                                e.target.style.display =
+                                                                    "none";
+                                                            }}
+                                                        />
 
-                      <thead>
+                                                    ) : (
 
-                      <tr>
+                                                        <div
+                                                            className="rounded me-3 bg-light d-flex align-items-center justify-content-center"
+                                                            style={{
+                                                                width: "80px",
+                                                                height: "80px",
+                                                            }}
+                                                        >
+                                                            No Image
+                                                        </div>
 
-                        <th>
-                          Product
-                        </th>
+                                                    )}
 
-                        <th>
-                          Price
-                        </th>
+                                                    <div>
 
-                        <th>
-                          Quantity
-                        </th>
+                                                        <strong>
+                                                            {item.name}
+                                                        </strong>
 
-                        <th>
-                          Total
-                        </th>
+                                                        <div className="text-muted">
+                                                            {item.brand}
+                                                        </div>
 
-                        <th>
-                          Action
-                        </th>
+                                                    </div>
 
-                      </tr>
+                                                </div>
 
-                      </thead>
+                                            </td>
 
 
-                      <tbody>
+                                            {/* =========================================
+                            PRICE
+                        ========================================= */}
 
-                      {cartItems.map((item) => (
+                                            <td>
+                                                ₹{" "}
+                                                {Number(
+                                                    item.price || 0
+                                                ).toFixed(2)}
+                                            </td>
 
-                          <tr key={item.id}>
 
-                            {/* PRODUCT */}
+                                            {/* =========================================
+                            QUANTITY
+                        ========================================= */}
 
-                            <td>
+                                            <td>
 
-                              <div className="d-flex align-items-center">
+                                                <div
+                                                    className="input-group input-group-sm"
+                                                    style={{
+                                                        width: "120px",
+                                                    }}
+                                                >
 
-                                {item.imageData ? (
+                                                    <button
+                                                        className="btn btn-outline-secondary"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleDecreaseQuantity(
+                                                                item
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            Number(
+                                                                item.quantity || 1
+                                                            ) <= 1
+                                                        }
+                                                    >
+                                                        -
+                                                    </button>
 
-                                    <img
-                                        src={convertBase64ToDataURL(
-                                            item.imageData,
-                                            item.imageType ||
-                                            "image/jpeg"
-                                        )}
-                                        alt={item.name}
-                                        className="rounded me-3"
-                                        width="80"
-                                        height="80"
-                                        style={{
-                                          objectFit: "cover",
-                                        }}
-                                    />
 
-                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        className="form-control text-center"
+                                                        value={
+                                                            item.quantity || 1
+                                                        }
+                                                        readOnly
+                                                    />
 
-                                    <div
-                                        className="rounded me-3 bg-light d-flex align-items-center justify-content-center"
-                                        style={{
-                                          width: "80px",
-                                          height: "80px",
-                                        }}
-                                    >
-                                      No Image
+
+                                                    <button
+                                                        className="btn btn-outline-secondary"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleIncreaseQuantity(
+                                                                item
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            Number(
+                                                                item.quantity || 1
+                                                            ) >=
+                                                            Number(
+                                                                item.stockQuantity ||
+                                                                0
+                                                            )
+                                                        }
+                                                    >
+                                                        +
+                                                    </button>
+
+                                                </div>
+
+                                            </td>
+
+
+                                            {/* =========================================
+                            TOTAL
+                        ========================================= */}
+
+                                            <td>
+
+                                                ₹{" "}
+                                                {(
+                                                    Number(
+                                                        item.price || 0
+                                                    ) *
+                                                    Number(
+                                                        item.quantity || 1
+                                                    )
+                                                ).toFixed(2)}
+
+                                            </td>
+
+
+                                            {/* =========================================
+                            REMOVE
+                        ========================================= */}
+
+                                            <td>
+
+                                                <button
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleRemoveFromCart(
+                                                            item.id
+                                                        )
+                                                    }
+                                                >
+                                                    Remove
+                                                </button>
+
+                                            </td>
+
+                                        </tr>
+
+                                    ))}
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+
+                            {/* =================================================
+                  TOTAL
+              ================================================= */}
+
+                            <div className="card mt-3">
+
+                                <div className="card-body">
+
+                                    <div className="d-flex justify-content-between align-items-center">
+
+                                        <h5 className="mb-0">
+                                            Total:
+                                        </h5>
+
+                                        <h5 className="mb-0">
+                                            ₹{" "}
+                                            {totalPrice.toFixed(2)}
+                                        </h5>
+
                                     </div>
-
-                                )}
-
-
-                                <div>
-
-                                  <strong>
-                                    {item.name}
-                                  </strong>
-
-                                  <div className="text-muted">
-                                    {item.brand}
-                                  </div>
 
                                 </div>
 
-                              </div>
-
-                            </td>
+                            </div>
 
 
-                            {/* PRICE */}
+                            {/* =================================================
+                  CHECKOUT
+              ================================================= */}
 
-                            <td>
-                              ₹{" "}
-                              {Number(
-                                  item.price || 0
-                              ).toFixed(2)}
-                            </td>
+                            <div className="d-grid mt-4">
 
-
-                            {/* QUANTITY */}
-
-                            <td>
-
-                              <div
-                                  className="input-group input-group-sm"
-                                  style={{
-                                    width: "120px",
-                                  }}
-                              >
-
-                                <button
-                                    className="btn btn-outline-secondary"
-                                    type="button"
+                                <Button
+                                    variant="primary"
+                                    size="lg"
                                     onClick={() =>
-                                        handleDecreaseQuantity(
-                                            item.id
-                                        )
+                                        setShowModal(true)
                                     }
                                 >
-                                  -
-                                </button>
+                                    Proceed to Checkout
+                                </Button>
+
+                            </div>
+
+                        </>
+
+                    )}
+
+                </div>
+
+            </div>
 
 
-                                <input
-                                    type="text"
-                                    className="form-control text-center"
-                                    value={
-                                        item.quantity || 1
-                                    }
-                                    readOnly
-                                />
+            {/* =====================================================
+          CHECKOUT POPUP
+      ===================================================== */}
 
-
-                                <button
-                                    className="btn btn-outline-secondary"
-                                    type="button"
-                                    onClick={() =>
-                                        handleIncreaseQuantity(
-                                            item.id
-                                        )
-                                    }
-                                >
-                                  +
-                                </button>
-
-                              </div>
-
-                            </td>
-
-
-                            {/* TOTAL */}
-
-                            <td>
-
-                              ₹{" "}
-                              {(
-                                  Number(item.price || 0) *
-                                  Number(item.quantity || 1)
-                              ).toFixed(2)}
-
-                            </td>
-
-
-                            {/* REMOVE */}
-
-                            <td>
-
-                              <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() =>
-                                      handleRemoveFromCart(
-                                          item.id
-                                      )
-                                  }
-                              >
-                                Remove
-                              </button>
-
-                            </td>
-
-                          </tr>
-
-                      ))}
-
-                      </tbody>
-
-                    </table>
-
-                  </div>
-
-
-                  {/* TOTAL */}
-
-                  <div className="card mt-3">
-
-                    <div className="card-body">
-
-                      <div className="d-flex justify-content-between align-items-center">
-
-                        <h5 className="mb-0">
-                          Total:
-                        </h5>
-
-                        <h5 className="mb-0">
-                          ₹{" "}
-                          {totalPrice.toFixed(2)}
-                        </h5>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* CHECKOUT */}
-
-                  <div className="d-grid mt-4">
-
-                    <Button
-                        variant="primary"
-                        size="lg"
-                        onClick={() =>
-                            setShowModal(true)
-                        }
-                    >
-                      Proceed to Checkout
-                    </Button>
-
-                  </div>
-
-                </>
-
-            )}
-
-          </div>
+            <CheckoutPopup
+                show={showModal}
+                handleClose={() =>
+                    setShowModal(false)
+                }
+                cartItems={cartItems}
+                totalPrice={totalPrice}
+                handleCheckout={handleCheckout}
+            />
 
         </div>
-
-
-        {/* CHECKOUT POPUP */}
-
-        <CheckoutPopup
-            show={showModal}
-            handleClose={() =>
-                setShowModal(false)
-            }
-            cartItems={cartItems}
-            totalPrice={totalPrice}
-            handleCheckout={handleCheckout}
-        />
-
-      </div>
-  );
+    );
 };
 
 export default Cart;

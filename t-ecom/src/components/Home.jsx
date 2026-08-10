@@ -94,10 +94,8 @@ const Home = ({ selectedCategory }) => {
       return;
     }
 
-    // Add product to cart
     addToCart(product);
 
-    // Show toast
     setToastProduct(product);
     setShowToast(true);
   };
@@ -167,9 +165,8 @@ const Home = ({ selectedCategory }) => {
                 <div className="toast-body d-flex align-items-center">
                   <img
                       src={convertBase64ToDataURL(
-                          toastProduct.imageData,
-                          toastProduct.imageType ||
-                          "image/jpeg"
+                          toastProduct.productImage,
+                          toastProduct.imageType || "image/jpeg"
                       )}
                       alt={toastProduct.name}
                       width="45"
@@ -217,7 +214,7 @@ const Home = ({ selectedCategory }) => {
                     name,
                     brand,
                     price,
-                    imageData,
+                    productImage,
                     imageType,
                     stockQuantity,
                     productAvailable,
@@ -244,11 +241,11 @@ const Home = ({ selectedCategory }) => {
                               to={`/product/${id}`}
                               className="text-decoration-none text-dark"
                           >
+
                             <img
                                 src={convertBase64ToDataURL(
-                                    imageData,
-                                    imageType ||
-                                    "image/jpeg"
+                                    productImage,
+                                    imageType || "image/jpeg"
                                 )}
                                 alt={name}
                                 className="card-img-top p-2"

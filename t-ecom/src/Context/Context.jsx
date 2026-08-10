@@ -2,328 +2,330 @@ import axios from "../axios.jsx";
 import { useState, useEffect, createContext } from "react";
 
 const AppContext = createContext({
-  data: [],
-  isError: "",
-  cart: [],
-  addToCart: () => {},
-  removeFromCart: () => {},
-  clearCart: () => {},
-  refreshData: () => {},
-  updateStockQuantity: () => {},
+    data: [],
+    isError: "",
+    cart: [],
+    addToCart: () => {},
+    removeFromCart: () => {},
+    clearCart: () => {},
+    refreshData: () => {},
+    updateStockQuantity: () => {},
 });
 
 export const AppProvider = ({ children }) => {
-  const [data, setData] = useState([]);
-  const [isError, setIsError] = useState("");
+    const [data, setData] = useState([]);
+    const [isError, setIsError] = useState("");
 
-  const [cart, setCart] = useState(() => {
-    try {
-      const savedCart = localStorage.getItem("cart");
+    // =========================================================
+    // CART
+    // =========================================================
 
-      return savedCart
-          ? JSON.parse(savedCart)
-          : [];
-    } catch (error) {
-      console.error(
-          "Error loading cart from localStorage:",
-          error
-      );
+    const [cart, setCart] = useState(() => {
+        try {
+            const savedCart = localStorage.getItem("cart");
 
-      return [];
-    }
-  });
-
-  const baseUrl = import.meta.env.VITE_BASE_URL;
-
-
-  // =========================================================
-  // ADD TO CART
-  // =========================================================
-
-  const addToCart = (product) => {
-
-    console.log(
-        "ADD TO CART CLICKED:",
-        product
-    );
-
-    setCart((previousCart) => {
-
-      const existingProduct =
-          previousCart.find(
-              (item) =>
-                  item.id === product.id
-          );
-
-
-      // =====================================================
-      // PRODUCT ALREADY EXISTS
-      // =====================================================
-
-      if (existingProduct) {
-
-        const currentQuantity =
-            Number(
-                existingProduct.quantity || 1
+            return savedCart
+                ? JSON.parse(savedCart)
+                : [];
+        } catch (error) {
+            console.error(
+                "Error loading cart from localStorage:",
+                error
             );
 
-        const stockQuantity =
-            Number(
-                product.stockQuantity || 0
-            );
+            return [];
+        }
+    });
 
+    const baseUrl =
+        import.meta.env.VITE_BASE_URL ||
+        "http://localhost:8080";
 
-        // Don't exceed stock
-        if (
-            currentQuantity >= stockQuantity
-        ) {
+    // =========================================================
+    // ADD TO CART
+    // =========================================================
 
-          console.log(
-              "Cannot add more than available stock"
-          );
+    const addToCart = (product) => {
+        console.log("ADD TO CART CLICKED:", product);
 
-          return previousCart;
+        if (!product) {
+            console.error("Product is undefined");
+            return;
         }
 
+        if (!product.id) {
+            console.error("Product ID is missing:", product);
+            return;
+        }
 
-        const updatedCart =
-            previousCart.map((item) => {
-
-              if (
-                  item.id === product.id
-              ) {
-
-                return {
-                  ...item,
-                  quantity:
-                      currentQuantity + 1,
-                };
-
-              }
-
-              return item;
-            });
-
-
-        console.log(
-            "UPDATED CART:",
-            updatedCart
+        const stockQuantity = Number(
+            product.stockQuantity || 0
         );
 
-        return updatedCart;
-      }
+        if (stockQuantity <= 0) {
+            console.log("Product is out of stock");
+            return;
+        }
 
+        setCart((previousCart) => {
 
-      // =====================================================
-      // NEW PRODUCT
-      // =====================================================
+            const existingProduct =
+                previousCart.find(
+                    (item) => item.id === product.id
+                );
 
-      const updatedCart = [
-        ...previousCart,
-        {
-          ...product,
-          quantity: 1,
-        },
-      ];
+            // =====================================================
+            // PRODUCT ALREADY EXISTS
+            // =====================================================
 
+            if (existingProduct) {
 
-      console.log(
-          "NEW CART:",
-          updatedCart
-      );
+                const currentQuantity = Number(
+                    existingProduct.quantity || 1
+                );
 
-      return updatedCart;
-    });
-  };
+                // Don't exceed stock
+                if (currentQuantity >= stockQuantity) {
 
+                    console.log(
+                        "Cannot add more than available stock"
+                    );
 
-  // =========================================================
-  // REMOVE FROM CART
-  // =========================================================
+                    return previousCart;
+                }
 
-  const removeFromCart = (productId) => {
+                const updatedCart =
+                    previousCart.map((item) => {
 
-    console.log(
-        "Removing product:",
-        productId
+                        if (item.id === product.id) {
+
+                            return {
+                                ...item,
+                                quantity:
+                                    currentQuantity + 1,
+
+                                // Keep latest product information
+                                name: product.name,
+                                price: product.price,
+                                brand: product.brand,
+                                category: product.category,
+                                productImage:
+                                product.productImage,
+                                imageType:
+                                product.imageType,
+                                stockQuantity:
+                                product.stockQuantity,
+                            };
+                        }
+
+                        return item;
+                    });
+
+                console.log(
+                    "UPDATED CART:",
+                    updatedCart
+                );
+
+                return updatedCart;
+            }
+
+            // =====================================================
+            // NEW PRODUCT
+            // =====================================================
+
+            const updatedCart = [
+                ...previousCart,
+                {
+                    ...product,
+                    quantity: 1,
+                },
+            ];
+
+            console.log(
+                "NEW CART:",
+                updatedCart
+            );
+
+            return updatedCart;
+        });
+    };
+
+    // =========================================================
+    // REMOVE FROM CART
+    // =========================================================
+
+    const removeFromCart = (productId) => {
+
+        console.log(
+            "Removing product:",
+            productId
+        );
+
+        setCart((previousCart) => {
+
+            const updatedCart =
+                previousCart.filter(
+                    (item) =>
+                        item.id !== productId
+                );
+
+            console.log(
+                "CART AFTER REMOVE:",
+                updatedCart
+            );
+
+            return updatedCart;
+        });
+    };
+
+    // =========================================================
+    // CLEAR CART
+    // =========================================================
+
+    const clearCart = () => {
+
+        console.log(
+            "Clearing cart"
+        );
+
+        setCart([]);
+
+        localStorage.removeItem("cart");
+    };
+
+    // =========================================================
+    // UPDATE STOCK QUANTITY
+    // =========================================================
+
+    const updateStockQuantity = (
+        productId,
+        newQuantity
+    ) => {
+
+        setData((previousData) =>
+            previousData.map((product) => {
+
+                if (
+                    product.id === productId
+                ) {
+
+                    return {
+                        ...product,
+                        stockQuantity:
+                        newQuantity,
+                    };
+                }
+
+                return product;
+            })
+        );
+
+        setCart((previousCart) =>
+            previousCart.map((item) => {
+
+                if (
+                    item.id === productId
+                ) {
+
+                    return {
+                        ...item,
+                        stockQuantity:
+                        newQuantity,
+                    };
+                }
+
+                return item;
+            })
+        );
+    };
+
+    // =========================================================
+    // REFRESH PRODUCTS
+    // =========================================================
+
+    const refreshData = async () => {
+
+        try {
+
+            setIsError("");
+
+            const response =
+                await axios.get(
+                    `${baseUrl}/api/products`
+                );
+
+            console.log(
+                "Products fetched:",
+                response.data
+            );
+
+            setData(
+                Array.isArray(response.data)
+                    ? response.data
+                    : []
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Error fetching products:",
+                error
+            );
+
+            setIsError(
+                error.response?.data ||
+                error.message ||
+                "Failed to fetch products"
+            );
+        }
+    };
+
+    // =========================================================
+    // INITIAL PRODUCT FETCH
+    // =========================================================
+
+    useEffect(() => {
+        refreshData();
+    }, []);
+
+    // =========================================================
+    // SAVE CART TO LOCAL STORAGE
+    // =========================================================
+
+    useEffect(() => {
+
+        console.log(
+            "Saving cart:",
+            cart
+        );
+
+        localStorage.setItem(
+            "cart",
+            JSON.stringify(cart)
+        );
+
+    }, [cart]);
+
+    // =========================================================
+    // PROVIDER
+    // =========================================================
+
+    return (
+        <AppContext.Provider
+            value={{
+                data,
+                isError,
+                cart,
+                addToCart,
+                removeFromCart,
+                clearCart,
+                refreshData,
+                updateStockQuantity,
+            }}
+        >
+            {children}
+        </AppContext.Provider>
     );
-
-    setCart((previousCart) => {
-
-      const updatedCart =
-          previousCart.filter(
-              (item) =>
-                  item.id !== productId
-          );
-
-      console.log(
-          "CART AFTER REMOVE:",
-          updatedCart
-      );
-
-      return updatedCart;
-    });
-  };
-
-
-  // =========================================================
-  // CLEAR CART
-  // =========================================================
-
-  const clearCart = () => {
-
-    console.log(
-        "Clearing cart"
-    );
-
-    setCart([]);
-
-    localStorage.removeItem("cart");
-  };
-
-
-  // =========================================================
-  // UPDATE STOCK QUANTITY
-  // =========================================================
-
-  const updateStockQuantity = (
-      productId,
-      newQuantity
-  ) => {
-
-    setData((previousData) =>
-        previousData.map((product) => {
-
-          if (
-              product.id === productId
-          ) {
-
-            return {
-              ...product,
-              stockQuantity:
-              newQuantity,
-            };
-
-          }
-
-          return product;
-        })
-    );
-
-
-    setCart((previousCart) =>
-        previousCart.map((item) => {
-
-          if (
-              item.id === productId
-          ) {
-
-            return {
-              ...item,
-              stockQuantity:
-              newQuantity,
-            };
-
-          }
-
-          return item;
-        })
-    );
-  };
-
-
-  // =========================================================
-  // REFRESH PRODUCTS
-  // =========================================================
-
-  const refreshData = async () => {
-
-    try {
-
-      setIsError("");
-
-      const response =
-          await axios.get(
-              `${baseUrl}/api/products`
-          );
-
-      console.log(
-          "Products fetched:",
-          response.data
-      );
-
-      setData(
-          Array.isArray(response.data)
-              ? response.data
-              : []
-      );
-
-    } catch (error) {
-
-      console.error(
-          "Error fetching products:",
-          error
-      );
-
-      setIsError(
-          error.response?.data ||
-          error.message ||
-          "Failed to fetch products"
-      );
-    }
-  };
-
-
-  // =========================================================
-  // INITIAL PRODUCT FETCH
-  // =========================================================
-
-  useEffect(() => {
-
-    refreshData();
-
-  }, []);
-
-
-  // =========================================================
-  // SAVE CART TO LOCAL STORAGE
-  // =========================================================
-
-  useEffect(() => {
-
-    console.log(
-        "Saving cart:",
-        cart
-    );
-
-    localStorage.setItem(
-        "cart",
-        JSON.stringify(cart)
-    );
-
-  }, [cart]);
-
-
-  // =========================================================
-  // PROVIDER
-  // =========================================================
-
-  return (
-      <AppContext.Provider
-          value={{
-            data,
-            isError,
-            cart,
-            addToCart,
-            removeFromCart,
-            clearCart,
-            refreshData,
-            updateStockQuantity,
-          }}
-      >
-        {children}
-      </AppContext.Provider>
-  );
 };
 
 export default AppContext;

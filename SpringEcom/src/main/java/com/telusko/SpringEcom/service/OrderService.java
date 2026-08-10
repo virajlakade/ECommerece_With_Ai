@@ -82,7 +82,34 @@ public class OrderService {
 
             productRepo.save(product);
 
-            updateProductVector(product);
+            String filter = String.format(
+                    "productId==%s",
+                    String.valueOf(product.getId())
+            );
+
+            vectorStore.delete(filter);
+
+            String content =
+                    "Product Name: " + product.getName() + "\n" +
+                            "Description: " + product.getDescription() + "\n" +
+                            "Brand: " + product.getBrand() + "\n" +
+                            "Price: " + product.getPrice() + "\n" +
+                            "Category: " + product.getCategory() + "\n" +
+                            "Release Date: " + product.getReleaseDate() + "\n" +
+                            "Product Available: " + product.isProductAvailable() + "\n" +
+                            "Stock Quantity: " + product.getStockQuantity();
+
+            Document document = new Document(
+                    UUID.randomUUID().toString(),
+                    content,
+                    Map.of(
+                            "productId",
+                            String.valueOf(product.getId())
+                    )
+            );
+
+            vectorStore.add(List.of(document));
+
 
             OrderItem orderItem = OrderItem.builder()
                     .product(product)
@@ -105,7 +132,72 @@ public class OrderService {
 
         Order savedOrder = orderRepo.save(order);
 
-        updateOrderVector(savedOrder);
+
+        // =========================================================
+        // ADD ORDER TO VECTOR STORE
+        // =========================================================
+
+        StringBuilder orderContent = new StringBuilder();
+
+        orderContent.append("Order Summary:\n");
+
+        orderContent.append("Order ID: ")
+                .append(savedOrder.getOrderId())
+                .append("\n");
+
+        orderContent.append("Customer Name: ")
+                .append(savedOrder.getCustomerName())
+                .append("\n");
+
+        orderContent.append("Email: ")
+                .append(savedOrder.getEmail())
+                .append("\n");
+
+        orderContent.append("Order Date: ")
+                .append(savedOrder.getOrderDate())
+                .append("\n");
+
+        orderContent.append("Order Status: ")
+                .append(savedOrder.getStatus())
+                .append("\n");
+
+        orderContent.append("Products:\n");
+
+        for (OrderItem item : savedOrder.getOrderItems()) {
+
+            orderContent.append("- Product Name: ")
+                    .append(item.getProduct().getName())
+                    .append("\n");
+
+            orderContent.append("  Product ID: ")
+                    .append(item.getProduct().getId())
+                    .append("\n");
+
+            orderContent.append("  Quantity: ")
+                    .append(item.getQuantity())
+                    .append("\n");
+
+            orderContent.append("  Price: ")
+                    .append(item.getProduct().getPrice())
+                    .append("\n");
+
+            orderContent.append("  Total Price: ")
+                    .append(item.getTotalPrice())
+                    .append("\n");
+        }
+
+
+        Document orderDocument = new Document(
+                UUID.randomUUID().toString(),
+                orderContent.toString(),
+                Map.of(
+                        "orderId",
+                        savedOrder.getOrderId()
+                )
+        );
+
+        vectorStore.add(List.of(orderDocument));
+
 
         return createOrderResponse(savedOrder);
     }
@@ -156,6 +248,7 @@ public class OrderService {
                                         + orderId
                         )
                 );
+
 
         // -----------------------------------------
         // Update customer information
