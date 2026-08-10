@@ -4,8 +4,7 @@ package com.telusko.SpringEcom.service;
 import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
-*/
-/*import org.springframework.ai.openai.OpenAiImageOptions;*//*
+import org.springframework.ai.openai.OpenAiImageOptions;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,4 +37,5 @@ public class AiImageService {
             throw new RuntimeException("Failed to download generated image", e);
         }
     }
-}*/
+}
+*/
