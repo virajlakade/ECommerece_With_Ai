@@ -60,7 +60,7 @@ public class ChatBotService {
                 SearchRequest.builder()
                         .query(userQuery)
                         .topK(5)
-                        .similarityThreshold(0.7f)
+                        .similarityThreshold(0.3f)
                         .build()
         );
         StringBuilder context = new StringBuilder();
